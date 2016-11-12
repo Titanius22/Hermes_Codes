@@ -4,11 +4,11 @@ COMMANDS:
 
 COMMAND: 1 latitude longitude elevation
 RETURN: (printed successful)
-This command sets the ground station's location. It is usually only called once before tracking begins but has no limitation on number of calls. It is used in determining the pointing direction of the antenna during tracking. This command call has the integer command number and 3 double arguments. The arguments of latitude and longitude are in decimal degrees and elevation is in meters. Returns 1 if sucessful, -1 if not.
+Sets the ground station's GPS location. It is usually only called once before tracking begins but has no limitation on number of calls. It is used in determining the pointing direction of the antenna during tracking. This command call has the integer command number and 3 double arguments. The arguments of latitude and longitude are in decimal degrees and elevation is in meters. Returns 1 if sucessful, -1 if not.
 
 COMMAND: 2 latitude longitude elevation
 RETURN: (printed successful)
-This command tells the tracking code and the rotor the object's GPS location. This command it called with a high frequency but no more than 1 Hz. This command call has the integer command number and 3 double arguments. The arguments of latitude and longitude are in decimal degrees and elevation is in meters. Returns 1 if sucessful, -1 if not.
+Sets the tracking object's GPS location. This command it called with a high frequency but no more than 1 Hz. This command call has the integer command number and 3 double arguments. The arguments of latitude and longitude are in decimal degrees and elevation is in meters. Returns 1 if sucessful, -1 if not.
 
 COMMAND: 3
 RETURN: (printed azimuth elevation)
