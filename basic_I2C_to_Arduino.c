@@ -35,7 +35,7 @@ static const char *devName = "/dev/i2c-1";
 
 //argc: the number of argments sent to main()
 //argv: the actual arguments
-int main(int argc, char** argv) { 
+int main(int argc, char* argv[]) { 
  
 	if (argc == 1) {
 		printf("Supply one or more commands to send to the Arduino\n");
@@ -65,15 +65,14 @@ int main(int argc, char** argv) {
 	int elevationAngle;
 	double numBuf;
 	
-	unsigned char cmd[30];
+	unsigned char cmd[40];
 	char buf[10];
 	struct timespec req={0},rem={0};
 	char *ptr;
-
-	switch (int(argv[0]))
-	​{
+	
+	switch ((int)argv[1]){
 		case 1:
-			if (sscanf(argv[0], "%d %f %f %f", &commandNum, &longitude, &latitude, &elevation) != 4) {
+			if (sscanf(argv[2], "%f %f %f", &longitude, &latitude, &elevation) != 3) {
 				fprintf(stderr, "Invalid parameters for case 1\n");
 				exit(1);
 			}
@@ -104,7 +103,7 @@ int main(int argc, char** argv) {
 			break;
 
 		case 2:
-			if (sscanf(argv[0], "%d %f %f %f", &commandNum, &longitude, &latitude, &elevation)) != 4) {
+			if (sscanf(argv[2], "%f %f %f", &longitude, &latitude, &elevation) != 3) {
 				fprintf(stderr, "Invalid parameters for case 2\n");
 				exit(1);
 			}
@@ -135,8 +134,8 @@ int main(int argc, char** argv) {
 			break;
 			
 		case 3:
-			if (argc != 1) {
-				fprintf(stderr, "Invalid parameters for case 3\n");
+			if (argc != 2) {
+				fprintf(stderr, "No parameters allowed for case 3\n");
 				exit(1);
 			}
 			printf("Sending 3\n");
