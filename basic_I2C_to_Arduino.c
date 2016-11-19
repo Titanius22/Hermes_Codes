@@ -69,8 +69,9 @@ int main(int argc, char* argv[]) {
 	char buf[10];
 	struct timespec req={0},rem={0};
 	char *ptr;
-	
-	switch ((int)argv[1]){
+	char *ptr_e;
+		
+	switch (strtol(argv[1], &ptr_e, 10)){
 		case 1:
 			if (sscanf(argv[2], "%f %f %f", &longitude, &latitude, &elevation) != 3) {
 				fprintf(stderr, "Invalid parameters for case 1\n");
