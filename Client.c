@@ -45,14 +45,45 @@ int main(int argc, char *argv[])
        printf("\n Error : Connect Failed \n");
        return 1;
     } 
-
-    while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
+	
+	int fileCount = 1;
+	int fileLineCount = 1;
+	char fileCounter[8];
+	//char filepath[] =  "/home/alarm/randomJunk/cCodeTests/";
+	//char fileName[] = ";
+	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/cTestPacket";
+	char fileExt[] = ".txt";
+	char fullFilePath[60];
+	
+    //while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
+	while ( (n = recv(sockfd, recvBuff, 200 , 0)) > 0)
     {
-        recvBuff[n] = 0;
-        if(fputs(recvBuff, stdout) == EOF)
-        {
-            printf("\n Error : Fputs error\n");
-        }
+		if (fileLineCount == 1){
+			springf(fileCounter, "%d", fileCount);
+		
+			//strcpy(fullFilePath, filepath);
+			//strcat(fullFilePath, fileName);
+			strcpy(fullFilePath, mostFilePath);
+			strcat(fullFilePath, fileCounter);
+			strcat(fullFilePath, fileExt);
+			
+			filePointer = fopen(fullFilePath, "a");
+		}
+	
+		if (filePointer != NULL)
+		{
+			fwrite(&recvBuff, 200, 1, filePointer);
+		}
+		//recvBuff[n] = 0;
+        //if(fputs(recvBuff, stdout) == EOF)
+        //{
+        //    printf("\n Error : Fputs error\n");
+        //}
+		if(fileLineCount == 50){
+			fileCount++;
+			fclose(filePointer);
+		}
+		fileLineCount++;
     } 
 
     if(n < 0)

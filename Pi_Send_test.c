@@ -42,7 +42,7 @@ int main(void) {
 		
 		springf(fileCounter, "%d", fileCountStr)
 		
-		strcpy(fullFilePath,filepath);
+		strcpy(fullFilePath, filepath);
 		strcat(fullFilePath, fileName);
 		strcat(fullFilePath, fileCounter);
 		strcat(fullFilePath, fileExt);

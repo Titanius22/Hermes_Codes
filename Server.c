@@ -12,7 +12,14 @@
 
 int main(int argc, char *argv[])
 {
-    int listenfd = 0, connfd = 0;
+    char letter=0;
+	int letterCount;
+	int lineCount;
+	int fileCount;
+	char Data[200];
+	srand(time(NULL));
+	
+	int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr; 
 
     char sendBuff[1025];
@@ -35,8 +42,28 @@ int main(int argc, char *argv[])
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL); 
 
         ticks = time(NULL);
-        snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-        write(connfd, sendBuff, strlen(sendBuff)); 
+        //snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
+        //write(connfd, sendBuff, strlen(sendBuff));
+
+		Data[0] = ltostr(1);
+		for(letterCount=1;letterCount<199;letterCount++){
+				letter=rand()%(127-32)+32;
+				Data[letterCount] = letter;
+		}
+		Data[letterCount+1] = "\n";
+		write(connfd, Data, 200);
+		
+		for(lineCount=1;lineCount<50;lineCount++){
+				Data[0] = ltostr(lineCount+1);
+				write(connfd, Data, 200);
+		}
+		
+		for(fileCount=1;fileCount<60;fileCount++){
+			for(lineCount=0;lineCount<50;lineCount++){
+				Data[0] = ltostr(lineCount);
+				write(connfd, Data, 200);
+			}
+		}
 
         close(connfd);
         sleep(1);
