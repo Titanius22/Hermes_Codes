@@ -19,21 +19,23 @@ int main(int argc, char *argv[])
 	char Data[200];
 	srand(time(NULL));
 	char fileCounter[8];
-	struct timespec req={0},rem={0}; /////////////////////////////////////////////////////////////////////////////////
+	//struct timespec req={0},rem={0}; /////////////////////////////////////////////////////////////////////////////////
 	
 	int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr; 
-
-    char sendBuff[1025];
-    time_t ticks; 
+	
+	for(letterCount=0;letterCount<199;letterCount++){
+				letter=rand()%(127-32)+32;
+				Data[letterCount] = letter;
+		}
+	Data[199] = 10;
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
-    memset(sendBuff, '0', sizeof(sendBuff)); 
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(5000); 
+    serv_addr.sin_port = htons(5020); 
 
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
 
@@ -43,22 +45,13 @@ int main(int argc, char *argv[])
     {
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL); 
 		
-		req.tv_nsec = 4000000000; //4 sec
-		nanosleep(&req,&rem);
-		
-        ticks = time(NULL);
-        //snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-        //write(connfd, sendBuff, strlen(sendBuff));
+		//req.tv_nsec = 4000000000; //4 sec
+		//nanosleep(&req,&rem);
 		
 		//Data[0] = "1"; ////////////////////////////////////////////////////////////////used for counting lines
-		for(letterCount=1;letterCount<200;letterCount++){
-				letter=rand()%(127-32)+32;
-				Data[letterCount] = letter;
-		}
-		//Data[letterCount+1] = "\n";
 		write(connfd, Data, 200);
 		
-		for(lineCount=1;lineCount<50;lineCount++){
+		for(lineCount=2;lineCount<=50;lineCount++){
 				sprintf(fileCounter, "%d", lineCount+1);
 				//Data[0] = fileCounter;//////////////////////////////////////////////////used for counting lines
 				write(connfd, Data, 200);
