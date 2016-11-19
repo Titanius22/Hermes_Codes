@@ -20,7 +20,7 @@ int main(void) {
 	int letterCount;
 	int lineCount;
 	char Data[200][50];
-	srand(time(null));
+	srand(time(NULL));
 	for(lineCount=0;lineCount<200;lineCount++){
 		for(letterCount=0;letterCount<49;letterCount++){
 			letter=rand()%(127-32)+32;
@@ -36,12 +36,15 @@ int main(void) {
 	FILE *filePointer;
 	int numOfiles = 60;
 	int fileCount = 0;
+	char fileCountStr[8];
 	
 	for (fileCount=1;fileCount<(numOfiles+1);fileCount++){
 		
-		strcat(fullFilePath, filepath);
-		strcat(fullFilePath, cTestPacket);
-		strcat(fullFilePath, itoa(fileCount));
+		springf(fileCounter, "%d", fileCountStr)
+		
+		strcpy(fullFilePath,filepath);
+		strcat(fullFilePath, fileName);
+		strcat(fullFilePath, fileCounter);
 		strcat(fullFilePath, fileExt);
 		
 		filePointer = fopen(fullFilePath, "a");
@@ -51,8 +54,6 @@ int main(void) {
 			fwrite(&Data, 200, 50, filePointer);
 			fclose(filePointer);
 		}
-		
-		fullFilePath = NULL;
 	}
 	
 	return 0;
