@@ -44,30 +44,30 @@ int main(int argc, char *argv[])
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL); 
 		
 		req.tv_nsec = 4000000000; //4 sec
-		nanosleep(req,rem);
+		nanosleep(&req,&rem);
 		
         ticks = time(NULL);
         //snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
         //write(connfd, sendBuff, strlen(sendBuff));
 		
-		Data[0] = "1";
-		for(letterCount=1;letterCount<199;letterCount++){
+		//Data[0] = "1"; ////////////////////////////////////////////////////////////////used for counting lines
+		for(letterCount=1;letterCount<200;letterCount++){
 				letter=rand()%(127-32)+32;
 				Data[letterCount] = letter;
 		}
-		Data[letterCount+1] = "\n";
+		//Data[letterCount+1] = "\n";
 		write(connfd, Data, 200);
 		
 		for(lineCount=1;lineCount<50;lineCount++){
 				sprintf(fileCounter, "%d", lineCount+1);
-				Data[0] = fileCounter;
+				//Data[0] = fileCounter;//////////////////////////////////////////////////used for counting lines
 				write(connfd, Data, 200);
 		}
 		
 		for(fileCount=1;fileCount<60;fileCount++){
 			for(lineCount=0;lineCount<50;lineCount++){
 				sprintf(fileCounter, "%d", lineCount);
-				Data[0] = fileCounter;
+				//Data[0] = fileCounter;//////////////////////////////////////////////////used for counting lines
 				write(connfd, Data, 200);
 			}
 		}

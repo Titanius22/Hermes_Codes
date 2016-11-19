@@ -66,6 +66,10 @@ int main(int argc, char *argv[])
     //while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
 	while ( (n = recv(sockfd, recvBuff, 200 , 0)) > 0)
     {
+		if (n != 200){
+			fprintf(stderr, "What the jack just happen????     n: %d\n", n);
+		}
+		
 		if (fileLineCount == 1){
 			sprintf(fileCounter, "%d", fileCount);
 		
