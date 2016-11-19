@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
 	char Data[200];
 	srand(time(NULL));
 	char fileCounter[8];
+	struct timespec req={0},rem={0}; /////////////////////////////////////////////////////////////////////////////////
 	
 	int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr; 
@@ -41,7 +42,10 @@ int main(int argc, char *argv[])
     while(1)
     {
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL); 
-
+		
+		req.tv_nsec = 4000000000; //4 sec
+		nanosleep(req,rem);
+		
         ticks = time(NULL);
         //snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
         //write(connfd, sendBuff, strlen(sendBuff));
@@ -56,7 +60,7 @@ int main(int argc, char *argv[])
 		
 		for(lineCount=1;lineCount<50;lineCount++){
 				sprintf(fileCounter, "%d", lineCount+1);
-				Data[0] = ltostr();
+				Data[0] = fileCounter;
 				write(connfd, Data, 200);
 		}
 		

@@ -56,6 +56,13 @@ int main(int argc, char *argv[])
 	char fullFilePath[60];
 	FILE *filePointer;
 	
+	
+	//CLEAR BUFFER????????????????????
+	while ( (n = recv(sockfd, recvBuff, 50 , 0)) > 0){}
+	
+	while((n = recv(sockfd, recvBuff, 50 , 0)) == 0){}
+	//CLEAR BUFFER????????????????????
+	
     //while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
 	while ( (n = recv(sockfd, recvBuff, 200 , 0)) > 0)
     {
@@ -81,6 +88,7 @@ int main(int argc, char *argv[])
         //    printf("\n Error : Fputs error\n");
         //}
 		if(fileLineCount == 50){
+			fileLineCount = 0;
 			fileCount++;
 			fclose(filePointer);
 		}
