@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
 	int fileCount;
 	char Data[200];
 	srand(time(NULL));
+	char fileCounter[8];
 	
 	int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr; 
@@ -44,8 +45,8 @@ int main(int argc, char *argv[])
         ticks = time(NULL);
         //snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
         //write(connfd, sendBuff, strlen(sendBuff));
-
-		Data[0] = ltostr(1);
+		
+		Data[0] = "1";
 		for(letterCount=1;letterCount<199;letterCount++){
 				letter=rand()%(127-32)+32;
 				Data[letterCount] = letter;
@@ -54,13 +55,15 @@ int main(int argc, char *argv[])
 		write(connfd, Data, 200);
 		
 		for(lineCount=1;lineCount<50;lineCount++){
-				Data[0] = ltostr(lineCount+1);
+				sprintf(fileCounter, "%d", lineCount+1);
+				Data[0] = ltostr();
 				write(connfd, Data, 200);
 		}
 		
 		for(fileCount=1;fileCount<60;fileCount++){
 			for(lineCount=0;lineCount<50;lineCount++){
-				Data[0] = ltostr(lineCount);
+				sprintf(fileCounter, "%d", lineCount);
+				Data[0] = fileCounter;
 				write(connfd, Data, 200);
 			}
 		}

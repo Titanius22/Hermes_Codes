@@ -54,12 +54,13 @@ int main(int argc, char *argv[])
 	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/cTestPacket";
 	char fileExt[] = ".txt";
 	char fullFilePath[60];
+	FILE *filePointer;
 	
     //while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
 	while ( (n = recv(sockfd, recvBuff, 200 , 0)) > 0)
     {
 		if (fileLineCount == 1){
-			springf(fileCounter, "%d", fileCount);
+			sprintf(fileCounter, "%d", fileCount);
 		
 			//strcpy(fullFilePath, filepath);
 			//strcat(fullFilePath, fileName);
