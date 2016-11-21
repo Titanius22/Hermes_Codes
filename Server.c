@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(5020); 
+    serv_addr.sin_port = htons(5000); 
 
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
 
@@ -64,7 +64,9 @@ int main(int argc, char *argv[])
 				write(connfd, Data, 200);
 			}
 		}
-
+		
+		fprintf(stderr, "Finished sending");
+		
         close(connfd);
         sleep(1);
      }
