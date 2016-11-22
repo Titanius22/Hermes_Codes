@@ -58,9 +58,9 @@ int main(int argc, char* argv[]) {
 	}
 
 	int commandNum;
-	double longitude;
-	double latitude;
-	double elevation;
+	int longitude;
+	int latitude;
+	int elevation;
 	int azimuthAngle;
 	int elevationAngle;
 	double numBuf;
@@ -77,14 +77,14 @@ int main(int argc, char* argv[]) {
 				fprintf(stderr, "Invalid number of parameters for case 1\n");
 				exit(1);
 			}
-			sscanf(argv[2], "%f", &longitude);
-			sscanf(argv[3], "%f", &latitude);
-			sscanf(argv[4], "%f", &elevation);
+			sscanf(argv[2], "%d", &longitude);
+			sscanf(argv[3], "%d", &latitude);
+			sscanf(argv[4], "%d", &elevation);
 			
-			printf("Sending 1 %f %f %f\n", longitude, latitude, elevation);
+			printf("Sending 1 %d %d %d\n", longitude, latitude, elevation);
 			
-			sprintf(cmd, "1 %f %f %f", longitude, latitude, elevation);
-			if (write(file, cmd, strlen(cmd)) == 1) {
+			sprintf(cmd, "1 %d %d %d", longitude, latitude, elevation);
+			if (write(file, cmd, strlen(cmd)) > 0) {
 		 
 				// As we are not talking to direct hardware but a microcontroller we
 				// need to wait a short while so that it can respond.
@@ -112,14 +112,14 @@ int main(int argc, char* argv[]) {
 				fprintf(stderr, "Invalid number of parameters for case 2\n");
 				exit(1);
 			}
-			sscanf(argv[2], "%f", &longitude);
-			sscanf(argv[3], "%f", &latitude);
-			sscanf(argv[4], "%f", &elevation);
+			sscanf(argv[2], "%d", &longitude);
+			sscanf(argv[3], "%d", &latitude);
+			sscanf(argv[4], "%d", &elevation);
 			
-			printf("Sending 2 %f %f %f\n", longitude, latitude, elevation);
+			printf("Sending 2 %d %d %d\n", longitude, latitude, elevation);
 			
-			sprintf(cmd, "2 %f %f %f", longitude, latitude, elevation);
-			if (write(file, cmd, strlen(cmd)) == 1) {
+			sprintf(cmd, "2 %d %d %d", longitude, latitude, elevation);
+			if (write(file, cmd, strlen(cmd)) > 0) {
 		 
 				// As we are not talking to direct hardware but a microcontroller we
 				// need to wait a short while so that it can respond.
@@ -159,20 +159,22 @@ int main(int argc, char* argv[]) {
 				req.tv_nsec = 10000000; //10ms
 				nanosleep(req,rem);
 
-				if (read(file, buf, 7) == 1) {
+				if (read(file, buf, 7) == 7) {
 					
-					numBuf = strtod(buf, &ptr);
-					if (numBuf != 0.0){
-						azimuthAngle = (int)(numBuf); //Converts first part to double then forces it to an int. Returns pointer to rest of the string.
+					numBuf = strtol(buf, &ptr);
+					if (numBuf != 0){
+						azimuthAngle = numBuf; //Converts first part to double then forces it to an int. Returns pointer to rest of the string.
 					}
 					else {
+						printf("Either, Azimuth angle is zero or it....\n");
 						printf("Failed, error reading azimuth angle, pointing angles not received\n");
 					}
-					numBuf = strtod(buf, &ptr);
-					if (numBuf != 0.0){
-						elevationAngle = (int)(numBuf); //Converts first part to double then forces it to an int. Returns pointer to rest of the string.
+					numBuf = strtol(buf, &ptr);
+					if (numBuf != 0){
+						elevationAngle = numBuf; //Converts first part to double then forces it to an int. Returns pointer to rest of the string.
 					}
 					else {
+						printf("Either, Elevation angle is zero or it....\n");
 						printf("Failed, error reading elevation angle, pointing angles not received\n");
 					}
 				}else {
