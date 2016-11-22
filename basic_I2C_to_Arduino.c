@@ -73,10 +73,14 @@ int main(int argc, char* argv[]) {
 		
 	switch (strtol(argv[1], &ptr_e, 10)){
 		case 1:
-			if (sscanf(argv[2], "%f %f %f", &longitude, &latitude, &elevation) != 3) {
-				fprintf(stderr, "Invalid parameters for case 1\n");
+			if (argc != 5) {
+				fprintf(stderr, "Invalid number of parameters for case 1\n");
 				exit(1);
 			}
+			sscanf(argv[2], "%f", &longitude);
+			sscanf(argv[3], "%f", &latitude);
+			sscanf(argv[4], "%f", &elevation);
+			
 			printf("Sending 1 %f %f %f\n", longitude, latitude, elevation);
 			
 			sprintf(cmd, "1 %f %f %f", longitude, latitude, elevation);
@@ -104,10 +108,14 @@ int main(int argc, char* argv[]) {
 			break;
 
 		case 2:
-			if (sscanf(argv[2], "%f %f %f", &longitude, &latitude, &elevation) != 3) {
-				fprintf(stderr, "Invalid parameters for case 2\n");
+			if (argc != 5) {
+				fprintf(stderr, "Invalid number of parameters for case 2\n");
 				exit(1);
 			}
+			sscanf(argv[2], "%f", &longitude);
+			sscanf(argv[3], "%f", &latitude);
+			sscanf(argv[4], "%f", &elevation);
+			
 			printf("Sending 2 %f %f %f\n", longitude, latitude, elevation);
 			
 			sprintf(cmd, "2 %f %f %f", longitude, latitude, elevation);
