@@ -5,7 +5,7 @@ int c;
 #include <Wire.h>
 // CURRENTLY Wire Master Reader
 void setup() {
-  Wire.begin();        // join i2c bus (address optional for master)
+  Wire.begin(3);        // join i2c bus (address optional for master)
   Serial1.begin(9600);  // start serial for output
   c = 0;
 }
@@ -21,11 +21,13 @@ void loop() {
 //  delay(500);
   
   delay(500);
-  Wire.beginTransmission(8);
   Data = String(c) + ", 0000, 1111, 2222, 3333, 4444";
+  
+  Wire.beginTransmission(8);
     for(i=0; i < Data.length(); i++){
       Wire.write(Data.charAt(i));
     }
   Wire.endTransmission();
+  
   c = c + 1;
 }

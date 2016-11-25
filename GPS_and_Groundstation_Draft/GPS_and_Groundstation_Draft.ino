@@ -75,14 +75,14 @@ void setup() {
   Serial.begin(4800);
   Serial1.begin(9600);                     // Communicate at 9600 baud (default for PAM-7Q module)
   delay(1000);
-  Serial.print("Command to send to rotator: ");
-  Serial.println("");
-  Serial.println(command);
+  //Serial.print("Command to send to rotator: ");
+  //Serial.println("");
+  //Serial.println(command);
   //Serial.println("Reading GPS");
   //balloonLat = (balloonLat*pi)/180;              //[radian]
   //balloonLon = (balloonLon*pi)/180;              //[radian]
-  groundStationlat = (groundStationlat*pi)/180;  //[radian]
-  groundStationlon = (groundStationlon*pi)/180;  //[radian]
+  //groundStationlat = (groundStationlat*pi)/180;  //[radian]
+  //groundStationlon = (groundStationlon*pi)/180;  //[radian]
   
   //d = findDistance(balloonLon, balloonLat, groundStationlon, groundStationlat);
   //Serial.println(d);
@@ -96,6 +96,10 @@ void setup() {
 
 void loop() {
 
+  Serial.print("hey");
+  delay(1000);
+
+/*
   while (Serial1.available()){
     char c=Serial1.read();
     //Serial.print(c);
@@ -165,7 +169,7 @@ void loop() {
       //Serial.println("Hasn't locked on satellite");
     //}
   }
-
+*/
 }
 
 
@@ -216,19 +220,6 @@ float findElevation(float balloonAlt, float groundStationAlt, float d) {
   el = asin(((balloonAlt - groundStationAlt)/d) - (d/(2.0*Re)));
   return el;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Get and process GPS data
 void gpsdump(TinyGPS &gps) {

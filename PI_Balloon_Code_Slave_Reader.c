@@ -15,7 +15,8 @@
 static const char *devName = "/dev/i2c-1";
 
 
-char buf[10];
+char buf[40];
+struct timespec req={0},rem={0};
 
 //argc: the number of argments sent to main()
 //argv: the actual arguments
@@ -41,7 +42,7 @@ int main(int argc, char* argv[]) {
 	while (1){
 		read(file, buf, 36);
 		printf("%s\n", buf);
-		nanosleep(req,rem);
+		nanosleep(&req,&rem);
 	}
 
 	close(file);
