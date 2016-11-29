@@ -19,7 +19,6 @@ int main(int argc, char *argv[])
 	char Data[200];
 	srand(time(NULL));
 	char fileCounter[8];
-	//struct timespec req={0},rem={0}; /////////////////////////////////////////////////////////////////////////////////
 	
 	int listenfd = 0, connfd = 0;
     struct sockaddr_in serv_addr; 
@@ -45,9 +44,6 @@ int main(int argc, char *argv[])
     {
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL); 
 		
-		//req.tv_nsec = 4000000000; //4 sec
-		//nanosleep(&req,&rem);
-		
 		//Data[0] = "1"; ////////////////////////////////////////////////////////////////used for counting lines
 		write(connfd, Data, 200);
 		
@@ -66,7 +62,6 @@ int main(int argc, char *argv[])
 		}
 		
 		fprintf(stderr, "Finished sending");
-		
         close(connfd);
         sleep(1);
      }
