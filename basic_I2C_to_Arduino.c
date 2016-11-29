@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
 
 				if (read(file, buf, 7) == 7) {
 					
-					numBuf = strtol(buf, &ptr);
+					numBuf = strtol(buf, &ptr, 10);
 					if (numBuf != 0){
 						azimuthAngle = numBuf; //Converts first part to double then forces it to an int. Returns pointer to rest of the string.
 					}
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
 						printf("Either, Azimuth angle is zero or it....\n");
 						printf("Failed, error reading azimuth angle, pointing angles not received\n");
 					}
-					numBuf = strtol(buf, &ptr);
+					numBuf = strtol(buf, &ptr, 10);
 					if (numBuf != 0){
 						elevationAngle = numBuf; //Converts first part to double then forces it to an int. Returns pointer to rest of the string.
 					}
