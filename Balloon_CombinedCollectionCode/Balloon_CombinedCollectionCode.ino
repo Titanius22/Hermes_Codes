@@ -44,7 +44,6 @@ before satellite lock may be inaccurate.
 
 // for GPS
 #include <SoftwareSerial.h>
-#include "math.h"
 #include "./TinyGPS.h"                  // Use local version of this library
 TinyGPS gps;
 // for Sensor
@@ -68,47 +67,157 @@ int64_t OFF = 0;
 int64_t SENS = 0; 
 int32_t P = 0;
 uint16_t C[7];
-int Temperature_cC; //in centiCelsius. *10^2
-int Pressure_cP; //in centiPressure. *10^2;
+uint32_t Temperature_cC; //RealTemp +60C (to remove negative) then *10^2 to get temp in centiCelsius. 
+uint32_t Pressure_dP; //in decaPascels *10^2;
+
+//For sending
+volatile unsigned int lineCount = 0;
+char endLine[3] = {'E', 'N', 'D'};
+char CharsToSend[24];
+
 
 void setup() {
+  // for communication with Pi
+  //Wire.begin(4);
+  Wire.begin();
+  Wire.onRequest(requestEvent); // register event
+  
   //for GPS------------------------------------------------------------------------------------------
-  delay(1000);
   Serial.begin(9600);
   Serial1.begin(9600);                     // Communicate at 9600 baud (default for PAM-7Q module)
-  delay(1000);
-
-  // Test things - GPS
-  //groundStationlat        = 34.22389;//[degrees]
-  //groundStationlon        = 118.0603;//[degrees]
-  //groundStationAlt        = 5710.0/5280.0;//[miles]
+  delay(100);
 
   // for Sensor------------------------------------------------------------------------------------------
   // Disable internal pullups, 10Kohms are on the breakout
   PORTC |= (1 << 4);
   PORTC |= (1 << 5);
-  Wire.begin();
-  //Serial.begin(9600); //9600 changed 'cos of timing?
   delay(100);
   initial(ADDRESS);
+
 }
 
 void loop() {
   //delay(1000);
   GPSstuff(); //delays 1 second
   SENSORstuff();
+  updateCharsToSend();
+  for (int i=0; i<24; i++ ){
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(CharsToSend[i]);
+  }
+  Serial.print('\n');
+  lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
+  lineCount++;
+}
+
+
+// function that executes whenever data is requested by master
+// this function is registered as an event, see setup()
+void requestEvent() {
+  updateCharsToSend();
+  Wire.write(CharsToSend, 24); // respond with message of 24 byte
+  lineCount++;
+}
+
+void updateCharsToSend(){
+  uint32_t intBuflineCount;
+  uint64_t longBuflatitude;
+  uint64_t longBuflongitude;
+  uint32_t intBufaltitude;
+  uint32_t intBuftemperature;
+  uint32_t intBufpressure;
+
+  char charintBuflineCount;
+  char charlongBuflatitude[8];
+  char charlongBuflongitude[8];
+  char charintBufaltitude[4];
+  char charintBuftemperature[4];
+  char charintBufpressure[4];
+
+  //Line counter-------------------------------------------
+  intBuflineCount = lineCount;
+  //charintBuflineCount[0] = &intBuflineCount;
+  charintBuflineCount = (char*)(&intBuflineCount);
+
+  //Serial.println(intBuflineCount);
+  Serial.println(intBuflineCount);
+  CharsToSend[0] = (char*)(&intBuflineCount + 1);
+  CharsToSend[1] = (char*)(&intBuflineCount + 2);
+  CharsToSend[2] = (char*)(&intBuflineCount + 3);
+  
+  //CharsToSend[0] = &charintBuflineCount+1;
+  //CharsToSend[1] = &charintBuflineCount+2;
+  //CharsToSend[2] = &charintBuflineCount+3;
+  //char * c = (char*)(&a)
+
+  //Latitude * 10^10 positive only---------------------------
+  //longBuflatitude = (((double)balloonLat) * 100000);
+  longBuflatitude = balloonLat * 10000000000;
+  charlongBuflatitude[0] = &longBuflatitude;
+  
+  CharsToSend[3] = charlongBuflatitude[3];
+  CharsToSend[4] = charlongBuflatitude[4];
+  CharsToSend[5] = charlongBuflatitude[5];
+  CharsToSend[6] = charlongBuflatitude[6];
+  CharsToSend[7] = charlongBuflatitude[7];
+  
+
+  //Longitude * 10^5 positive only max of 109 degrees--------
+  longBuflongitude = balloonLon * 100000;
+  charlongBuflongitude[0] = &longBuflongitude;
+
+  CharsToSend[8] = charlongBuflongitude[3];
+  CharsToSend[9] = charlongBuflongitude[4];
+  CharsToSend[10] = charlongBuflongitude[5];
+  CharsToSend[11] = charlongBuflongitude[6];
+  CharsToSend[12] = charlongBuflongitude[7];
+
+
+  //Altitude * 100--------------------------------------------
+  intBufaltitude = balloonAlt * 100;
+  charintBufaltitude[0] = &intBufaltitude;
+
+  CharsToSend[13] = charintBufaltitude[1];
+  CharsToSend[14] = charintBufaltitude[2];
+  CharsToSend[15] = charintBufaltitude[3];
+
+
+  //Temperature count------------------------------------------
+  intBuftemperature = Temperature_cC;
+  charintBuftemperature[0] = &intBuftemperature;
+
+  CharsToSend[16] = charintBuftemperature[2];
+  CharsToSend[14] = charintBuftemperature[3];
+
+
+  //Pressure count---------------------------------------------
+  intBufpressure = Pressure_dP;
+  charintBufpressure[0] = &intBufpressure;
+
+  CharsToSend[18] = charintBufpressure[1];
+  CharsToSend[19] = charintBufpressure[2];
+  CharsToSend[20] = charintBufpressure[3];
+
+
+  //End of line chars-------------------------------------------
+
+  CharsToSend[21] = endLine[0];
+  CharsToSend[22] = endLine[1];
+  CharsToSend[23] = endLine[2];
 }
 
 
 void GPSstuff() {
   bool newdata = false;
-  unsigned long start = millis();       // starts a count of millisec since the code began 
+  int64_t start = millis();       // starts a count of millisec since the code began 
   while (millis() - start < 1000) {     // Update every 1 seconds
     if (feedgps())                      // if serial1 is available and can read gps.encode
       newdata = true;
   }
   if (newdata) {  // if locked
     gpsdump(gps);
+     
     
     //using GPS ------------------------------------------------------------------------------------------
     Serial.println("LOCKED ON");
@@ -130,13 +239,10 @@ void SENSORstuff() {
     D1 = getVal(ADDRESS, 0x48); // Pressure raw
     D2 = getVal(ADDRESS, 0x58);// Temperature raw
     // dT   = D2 - (C[5]*(2^8));
-    dT   = D2 - ((uint32_t)C[5] << 8); //Difference between actual and reference temperature 
-    //OFF  = ((int64_t)C[2] << 17) + ((dT * C[4]) >> 6);
+    dT   = D2 - ((uint32_t)C[5] << 8); //Difference between actual and reference temperature
     OFF  = ((int64_t)C[2] << 16) + ((dT * C[4]) >> 7); //Offset at actual temperature
-    //SENS = ((int32_t)C[1] << 16) + ((dT * C[3]) >> 7);
     SENS = ((int32_t)C[1] << 15) + ((dT * C[3]) >> 8); //Sensitivity at actual temperature
-    TEMP = (((int64_t)dT * (int64_t)C[6]) >> 23) + 2000;
-    //TEMP = (int64_t)dT * (int64_t)C[6] / 8388608 + 2000; //Actual temperature
+    TEMP = (((int64_t)dT * (int64_t)C[6]) >> 23) + 2000; //Actual temperature
     if(TEMP < 2000) // if temperature lower than 20 Celsius 
     {
       int32_t T1    = 0;
@@ -154,21 +260,22 @@ void SENSORstuff() {
       OFF -= OFF1; 
       SENS -= SENS1;
     }
-    //Temperature = (float)TEMP / 100;
-    Temperature_cC = TEMP;
-    //P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 32768;
+    //double Temperature = (float)TEMP / 100;
+    Temperature_cC = TEMP + 6000;
     P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
-    //Pressure = (float)P / 100;
-    Pressure_cP = P;
-    //Serial.print("Tempurature = ");
-    //Serial.print(Temperature);
-    //Serial.print("      Actual PRESSURE= ");
+    //double Pressure = (float)P / 100;
+    Pressure_dP = P;
+    //Serial.print("Temperature = ");
+    //Serial.print(Temperature_cC);
+    //Serial.print("      Actual Pressure = ");
     //Serial.print(Pressure);
+    //Serial.print("      Pressure_dP = ");
+    //Serial.println(Pressure_dP);
 }
 
 // Get and process GPS data
 void gpsdump(TinyGPS &gps) {
-  unsigned long age;
+  //unsigned long age;
   gps.f_get_position(&balloonLat, &balloonLon, &age);
   //Serial.print(balloonLat, 4); 
   //Serial.print(", "); 

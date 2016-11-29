@@ -11,7 +11,6 @@
 
 #include <Wire.h>
 
-char fun[25];
 unsigned int lineCount = 0;
 unsigned long latitude;
 unsigned long longitude;
