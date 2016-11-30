@@ -53,8 +53,8 @@ TinyGPS gps;
 // for GPS------------------------------------------------------------------------------------------
 unsigned long age;
 float balloonLat              = 34.28889;//[degrees]
-float balloonLon              = 117.6458;//[degrees]
-float balloonAlt              = 10064.0/5280.0;//[miles]
+float balloonLon              = 91.6458;//[degrees]
+float balloonAlt              = 10064.0;///5280.0;//[miles]
 //const byte rxPin = 0;
 //const byte txPin = 1;
 
@@ -67,19 +67,21 @@ int64_t OFF = 0;
 int64_t SENS = 0; 
 int32_t P = 0;
 uint16_t C[7];
-uint32_t Temperature_cC; //RealTemp +60C (to remove negative) then *10^2 to get temp in centiCelsius. 
-uint32_t Pressure_dP; //in decaPascels *10^2;
+unsigned int Temperature_cC; //RealTemp +60C (to remove negative) then *10^2 to get temp in centiCelsius. 
+unsigned long Pressure_dP; //in decaPascels *10^2;
 
 //For sending
 volatile unsigned int lineCount = 0;
 char endLine[3] = {'E', 'N', 'D'};
-char CharsToSend[24];
-
+//char CharsToSend[24];
+//char* CharsToSend = malloc(24);
+char* CharsToSend = malloc(22);
+char* writeTo=CharsToSend;
 
 void setup() {
   // for communication with Pi
-  //Wire.begin(4);
-  Wire.begin();
+  Wire.begin(4);
+  //Wire.begin();
   Wire.onRequest(requestEvent); // register event
   
   //for GPS------------------------------------------------------------------------------------------
@@ -104,11 +106,23 @@ void loop() {
   for (int i=0; i<24; i++ ){
     Serial.print(i);
     Serial.print(": ");
-    Serial.println(CharsToSend[i]);
+    Serial.println(CharsToSend[i], 16);
   }
   Serial.print('\n');
-  lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
-  lineCount++;
+
+  Serial.println((unsigned long)getIntFromByte(CharsToSend,3,4));
+  Serial.println((unsigned long)getIntFromByte(CharsToSend+3,4,4));
+  Serial.println((unsigned long)getIntFromByte(CharsToSend+7,4,4));
+  Serial.println((unsigned long)getIntFromByte(CharsToSend+11,3,4));
+  Serial.println((unsigned int)getIntFromByte(CharsToSend+14,2,2));
+  Serial.println((unsigned long)getIntFromByte(CharsToSend+16,3,4));
+  Serial.println((char)getIntFromByte(CharsToSend+19,1,1));
+  Serial.println((char)getIntFromByte(CharsToSend+20,1,1));
+  Serial.println((char)getIntFromByte(CharsToSend+21,1,1));
+  
+  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
+  //lineCount++;
+  delay(200);
 }
 
 
@@ -116,95 +130,142 @@ void loop() {
 // this function is registered as an event, see setup()
 void requestEvent() {
   updateCharsToSend();
+  //Wire.write(CharsToSend, 24); // respond with message of 24 byte
+  CharsToSend[0] = 'g';
+  CharsToSend[1] = '@';
+  CharsToSend[2] = 'u';
+  CharsToSend[3] = 'u';
+  CharsToSend[9] = 'E';
+  CharsToSend[14] = 'N';
+  CharsToSend[20] = 'D';
+  
   Wire.write(CharsToSend, 24); // respond with message of 24 byte
   lineCount++;
 }
 
 void updateCharsToSend(){
-  uint32_t intBuflineCount;
-  uint64_t longBuflatitude;
-  uint64_t longBuflongitude;
-  uint32_t intBufaltitude;
-  uint32_t intBuftemperature;
-  uint32_t intBufpressure;
+  
+  CharsToSend = malloc(22);
+  writeTo=CharsToSend;
+  unsigned long intBuflineCount;
+  unsigned long longBuflatitude;
+  unsigned long longBuflongitude;
+  unsigned long intBufaltitude;
+  unsigned int intBuftemperature;
+  unsigned long intBufpressure;
 
-  char charintBuflineCount;
-  char charlongBuflatitude[8];
-  char charlongBuflongitude[8];
-  char charintBufaltitude[4];
-  char charintBuftemperature[4];
-  char charintBufpressure[4];
+//  //char charintBuflineCount;
+//  char* charintBuflineCount;
+//  char charlongBuflatitude[8];
+//  char charlongBuflongitude[8];
+//  char charintBufaltitude[4];
+//  char charintBuftemperature[4];
+//  char charintBufpressure[4];
 
-  //Line counter-------------------------------------------
+  ////Line counter-------------------------------------------
   intBuflineCount = lineCount;
-  //charintBuflineCount[0] = &intBuflineCount;
-  charintBuflineCount = (char*)(&intBuflineCount);
+  //charintBuflineCount = (char*)&intBuflineCount;
 
   //Serial.println(intBuflineCount);
-  Serial.println(intBuflineCount);
-  CharsToSend[0] = (char*)(&intBuflineCount + 1);
-  CharsToSend[1] = (char*)(&intBuflineCount + 2);
-  CharsToSend[2] = (char*)(&intBuflineCount + 3);
+  //Serial.println(intBuflineCount);
+  //CharsToSend[0] = (char*)(&intBuflineCount + 1);
+  //CharsToSend[1] = (char*)(&intBuflineCount + 2);
+  //CharsToSend[2] = (char*)(&intBuflineCount + 3);
   
-  //CharsToSend[0] = &charintBuflineCount+1;
-  //CharsToSend[1] = &charintBuflineCount+2;
-  //CharsToSend[2] = &charintBuflineCount+3;
+  //CharsToSend[0] = charintBuflineCount;
+  //CharsToSend[1] = charintBuflineCount+2;
+  //CharsToSend[2] = charintBuflineCount+3;
+
+  //CharsToSend[0] = (uint32_t)((intBuflineCount >> 16) & 0xFF) ;
+  //CharsToSend[1] = (uint32_t)((intBuflineCount >> 8) & 0xFF) ;
+  //CharsToSend[2] = (uint32_t)(intBuflineCount & 0xFF) ;
   //char * c = (char*)(&a)
 
-  //Latitude * 10^10 positive only---------------------------
-  //longBuflatitude = (((double)balloonLat) * 100000);
-  longBuflatitude = balloonLat * 10000000000;
-  charlongBuflatitude[0] = &longBuflatitude;
-  
-  CharsToSend[3] = charlongBuflatitude[3];
-  CharsToSend[4] = charlongBuflatitude[4];
-  CharsToSend[5] = charlongBuflatitude[5];
-  CharsToSend[6] = charlongBuflatitude[6];
-  CharsToSend[7] = charlongBuflatitude[7];
-  
+  insertBytesFromInt(&intBuflineCount, &writeTo, 3);
 
-  //Longitude * 10^5 positive only max of 109 degrees--------
-  longBuflongitude = balloonLon * 100000;
-  charlongBuflongitude[0] = &longBuflongitude;
-
-  CharsToSend[8] = charlongBuflongitude[3];
-  CharsToSend[9] = charlongBuflongitude[4];
-  CharsToSend[10] = charlongBuflongitude[5];
-  CharsToSend[11] = charlongBuflongitude[6];
-  CharsToSend[12] = charlongBuflongitude[7];
-
-
-  //Altitude * 100--------------------------------------------
+  ////Latitude * 10^5 positive only----------------should be 10^10-----------
+  longBuflatitude = (unsigned long)(balloonLat * 100000);
+//  longBuflatitude = balloonLat * 10000000000;
+//  charlongBuflatitude[0] = &longBuflatitude;
+//  
+//  CharsToSend[3] = charlongBuflatitude[3];
+//  CharsToSend[4] = charlongBuflatitude[4];
+//  CharsToSend[5] = charlongBuflatitude[5];
+//  CharsToSend[6] = charlongBuflatitude[6];
+//  CharsToSend[7] = charlongBuflatitude[7];
+Serial.println(longBuflatitude);
+  insertBytesFromInt(&longBuflatitude, &writeTo, 4);
+//
+//  //Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
+  longBuflongitude = (unsigned long)(balloonLon * 100000);
+//  charlongBuflongitude[0] = &longBuflongitude;
+//
+//  CharsToSend[8] = charlongBuflongitude[3];
+//  CharsToSend[9] = charlongBuflongitude[4];
+//  CharsToSend[10] = charlongBuflongitude[5];
+//  CharsToSend[11] = charlongBuflongitude[6];
+//  CharsToSend[12] = charlongBuflongitude[7];
+  insertBytesFromInt(&longBuflongitude, &writeTo, 4);
+//
+//  //Altitude * 100--------------------------------------------
   intBufaltitude = balloonAlt * 100;
-  charintBufaltitude[0] = &intBufaltitude;
-
-  CharsToSend[13] = charintBufaltitude[1];
-  CharsToSend[14] = charintBufaltitude[2];
-  CharsToSend[15] = charintBufaltitude[3];
-
-
-  //Temperature count------------------------------------------
+//  charintBufaltitude[0] = &intBufaltitude;
+//
+//  CharsToSend[13] = charintBufaltitude[1];
+//  CharsToSend[14] = charintBufaltitude[2];
+//  CharsToSend[15] = charintBufaltitude[3];
+  insertBytesFromInt(&intBufaltitude, &writeTo, 3);
+//
+//  //Temperature count------------------------------------------
   intBuftemperature = Temperature_cC;
-  charintBuftemperature[0] = &intBuftemperature;
-
-  CharsToSend[16] = charintBuftemperature[2];
-  CharsToSend[14] = charintBuftemperature[3];
-
-
-  //Pressure count---------------------------------------------
+//  charintBuftemperature[0] = &intBuftemperature;
+//
+//  CharsToSend[16] = charintBuftemperature[2];
+//  CharsToSend[14] = charintBuftemperature[3];
+  insertBytesFromInt(&intBuftemperature, &writeTo, 2);
+//
+//  //Pressure count---------------------------------------------
   intBufpressure = Pressure_dP;
-  charintBufpressure[0] = &intBufpressure;
-
-  CharsToSend[18] = charintBufpressure[1];
-  CharsToSend[19] = charintBufpressure[2];
-  CharsToSend[20] = charintBufpressure[3];
+//  charintBufpressure[0] = &intBufpressure;
+//
+//  CharsToSend[18] = charintBufpressure[1];
+//  CharsToSend[19] = charintBufpressure[2];
+//  CharsToSend[20] = charintBufpressure[3];
+  insertBytesFromInt(&intBufpressure, &writeTo, 3);
 
 
   //End of line chars-------------------------------------------
 
-  CharsToSend[21] = endLine[0];
-  CharsToSend[22] = endLine[1];
-  CharsToSend[23] = endLine[2];
+  //CharsToSend[21] = endLine[0];
+  //CharsToSend[22] = endLine[1];
+  //CharsToSend[23] = endLine[2];
+
+  CharsToSend[19] = endLine[0];
+  CharsToSend[20] = endLine[1];
+  CharsToSend[21] = endLine[2];
+}
+
+
+unsigned long insertBytesFromInt(void* value,unsigned char** byteStart,int numberBytesToCopy){//, int startLocation){
+
+  unsigned char* valueBytes=value;
+  int loopCount=0;
+  for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
+    (*byteStart)[loopCount]=valueBytes[(numberBytesToCopy-1)-loopCount];
+  }
+  *byteStart+=(int)numberBytesToCopy;
+}
+
+void* getIntFromByte(unsigned char* arrayStart,int bytes, int bytesSizeOfType){
+  char* intPtr=malloc(bytesSizeOfType);
+  void* tempPtr=intPtr;
+  unsigned int* realIntPtr=tempPtr;
+  *realIntPtr=0;
+  int loopCount;
+  for(loopCount=0;loopCount<bytes;loopCount++){
+    intPtr[loopCount]=arrayStart[(bytes-1)-loopCount];
+  }
+  return *(realIntPtr);
 }
 
 
@@ -265,12 +326,12 @@ void SENSORstuff() {
     P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
     //double Pressure = (float)P / 100;
     Pressure_dP = P;
-    //Serial.print("Temperature = ");
-    //Serial.print(Temperature_cC);
+    Serial.print("Temperature = ");
+    Serial.print(Temperature_cC);
     //Serial.print("      Actual Pressure = ");
     //Serial.print(Pressure);
-    //Serial.print("      Pressure_dP = ");
-    //Serial.println(Pressure_dP);
+    Serial.print("      Pressure_dP = ");
+    Serial.println(Pressure_dP);
 }
 
 // Get and process GPS data
