@@ -44,30 +44,32 @@ int main(int argc, char* argv[]) {
 	}
 	
 	req.tv_nsec = 50000000; //50ms
+	int lineCounter = 1;
 	
 	while (1){
 		read(file, buf, 22);
 		
-		char* writeArray=buf;
-		char** wrPtr=&writeArray;
-		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,3));
+		if(lineCounter%10 == 0){
+			char* writeArray=buf;
+			char** wrPtr=&writeArray;
+			printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+			
+			printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
 		  
-		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,4));
+			printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
+
+			printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+			printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
 		  
-		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,4));
+			printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
 
-		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,3));
+			printf("%c", (char)getIntFromByte(wrPtr,1));
 
-		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,2));
-		  
-		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,3));
+			printf("%c", (char)getIntFromByte(wrPtr,1));
 
-		printf("%c\n", (char)getIntFromByte(wrPtr,1));
-
-		printf("%c\n", (char)getIntFromByte(wrPtr,1));
-
-		printf("%c\n", (char)getIntFromByte(wrPtr,1));
-		
+			printf("%c\n", (char)getIntFromByte(wrPtr,1));
+		}
 		
 		//printf("%s\n", buf);
 		nanosleep(&req,&rem);

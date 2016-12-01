@@ -84,7 +84,7 @@ void setup() {
   
   
   //for GPS------------------------------------------------------------------------------------------
-  Serial.begin(9600);
+  Serial.begin(74880);
   Serial1.begin(9600);                     // Communicate at 9600 baud (default for PAM-7Q module)
   
   delay(1000);
@@ -109,8 +109,8 @@ void loop() {
   SENSORstuff();
   updateCharsToSend();
   
-//  char* writeArray=CharsToSend;
-//  char** wrPtr=&writeArray;
+  char* writeArray=CharsToSend;
+  char** wrPtr=&writeArray;
 //  for (short i=0; i<22; i++ ){
 //    Serial.print(i);
 //    Serial.print(": ");
@@ -118,28 +118,27 @@ void loop() {
 //  }
 //  Serial.print('\n');
   
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-//  
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-//  
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-//
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-//
-//  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
-//  
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-//
-//  Serial.println((char)getIntFromByte(wrPtr,1));
-//
-//  Serial.println((char)getIntFromByte(wrPtr,1));
-//
-//  Serial.println((char)getIntFromByte(wrPtr,1));
+  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+  
+  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+  
+  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+
+  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+
+  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
+  
+  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+
+  Serial.println((char)getIntFromByte(wrPtr,1));
+
+  Serial.println((char)getIntFromByte(wrPtr,1));
+
+  Serial.println((char)getIntFromByte(wrPtr,1));
   
   //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
-  lineCount++;
+  //lineCount++; // increments in updateCharsToSend
   
-
   delay(100);
 }
 
@@ -153,9 +152,8 @@ void requestEvent() {
   //updateCharsToSend();
   Wire.write(CharsToSend, 22); // respond with message of 24 byte
   //updateCharsToSend();
-  //Wire.write(CharsToSend, 22); // respond with message of 24 byte
   //free(CharsToSend);
-  //Wire.write("0000000000000000000000");
+  //Wire.write("ftgyho04856000r57j0k?0");
   //lineCount++;
   //GPSstuff();
   //SENSORstuff();
@@ -174,9 +172,6 @@ void updateCharsToSend(){
   unsigned long intBufaltitude;
   unsigned int intBuftemperature;
   unsigned long intBufpressure;
-
-  GPSstuff();
-  SENSORstuff();
 
   //Line counter-------------------------------------------
   intBuflineCount = lineCount;
@@ -222,7 +217,8 @@ void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytes
   *byteStart+=(short)numberBytesToCopy;
 }
 
-unsigned long long getIntFromByte(unsigned char** arrayStart, short bytes){
+unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
+//unsigned long long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
   char* intPtr=malloc (sizeof(unsigned long long));
