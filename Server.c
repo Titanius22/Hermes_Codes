@@ -19,8 +19,8 @@ unsigned long getIntFromByte(unsigned char** ,short);
 // The slave Arduino address
 #define ADDRESS 0x04
 
-char recvBuf[25];
-struct timespec req={0},rem={0};
+
+
 
 // The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
 static const char *devName = "/dev/i2c-1";
@@ -32,6 +32,8 @@ int main(int argc, char *argv[])
 	int lineCount;
 	int fileCount;
 	char Data[200];
+	char recvBuf[25];
+	struct timespec req={0},rem={0};
 	//srand(time(NULL));
 	char fileCounter[8];
 	
@@ -97,8 +99,8 @@ int main(int argc, char *argv[])
 		}*/
 		
 		while (1){
-			read(file, buf, 22);
-			write(connfd, buf, 22);
+			read(file, recvBuf, 22);
+			write(connfd, recvBuf, 22);
 		
 			/*if(lineCounter%10 == 0){
 				char* writeArray=buf;

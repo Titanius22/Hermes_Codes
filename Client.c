@@ -13,7 +13,7 @@
 int main(int argc, char *argv[])
 {
     int sockfd = 0, n = 0;
-    char recvBuff[256];
+    char recvBuff[25];
     struct sockaddr_in serv_addr; 
 
     if(argc != 2)
@@ -46,51 +46,77 @@ int main(int argc, char *argv[])
     } 
 	
 	int fileCount = 1;
+	int packetCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
 	//char filepath[] =  "/home/alarm/randomJunk/cCodeTests/";
 	//char fileName[] = ";
-	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/cTestPacket";
+	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/cMajorTest";
 	char fileExt[] = ".txt";
 	char fullFilePath[60];
 	FILE *filePointer;
+	char leftOvers[25];
+	char* writeArray;
+	char** wrPtr;
 	
-	while ( (n = recv(sockfd, recvBuff, 200 , 0)) > 0)
+	while ( (n = recv(sockfd, recvBuff, 22 , 0)) > 0)
     {
 		// if (n != 200){
 			// fprintf(stderr, "What the jack just happen????     n: %d\n", n);
 		// }
 		
-		if (fileLineCount == 1 && fileCount == 1){
-			sprintf(fileCounter, "%d", fileCount);
+		//if (fileLineCount == 1){ // && fileCount == 1){
+			//sprintf(fileCounter, "%d", fileCount);
 		
 			//strcpy(fullFilePath, filepath);
 			//strcat(fullFilePath, fileName);
-			strcpy(fullFilePath, mostFilePath);
-			strcat(fullFilePath, fileCounter);
-			strcat(fullFilePath, fileExt);
+			//strcpy(fullFilePath, mostFilePath);
+			//strcat(fullFilePath, fileCounter);
+			//strcat(fullFilePath, fileExt);
 			
-			filePointer = fopen(fullFilePath, "a");
-		}
+			//filePointer = fopen(fullFilePath, "a");
+		//}
 	
-		if (filePointer != NULL)
-		{
-			fwrite(&recvBuff, n, 1, filePointer);
-		}
+		//if (filePointer != NULL)
+		//{
+			//fwrite(&recvBuff, n, 1, filePointer);
+			if ((n == 22) && (packetCount%10 == 0)){
+				char* writeArray=recvBuff;
+				char** wrPtr=&writeArray;
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+		  
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
+		  
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
+
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+		  
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+				printf("%c", (char)getIntFromByte(wrPtr,1));
+
+				printf("%c", (char)getIntFromByte(wrPtr,1));
+
+				printf("%c\n", (char)getIntFromByte(wrPtr,1));
+			}
+		//}
 		//recvBuff[n] = 0;
         //if(fputs(recvBuff, stdout) == EOF)
         //{
         //    printf("\n Error : Fputs error\n");
         //}
-		if(fileLineCount == 50){
-			fileLineCount = 0;
-			fileCount++;
-			
-		}
-		fileLineCount++;
+		//if(fileLineCount == 100){
+			//fileLineCount = 0;
+			//fileCount++;
+			//fclose(filePointer);
+		//}
+		//fileLineCount++;
+		packetCount++
     }
+	//fclose(filePointer);
 	
-	fclose(filePointer);
 
     if(n < 0)
     {
@@ -98,4 +124,30 @@ int main(int argc, char *argv[])
     } 
 
     return 0;
+}
+
+		
+		
+
+unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
+
+  //Allocating array to read into
+  unsigned char* intPtr = malloc (sizeof(unsigned long));
+  unsigned long temp;
+  //Void pointer to same location to return
+
+   //Loop Counter
+  short loopCount;
+  for(loopCount=0;loopCount<bytes;loopCount++){
+
+    //Copying bytes from one array to the other
+    if(loopCount<bytes){
+      intPtr[loopCount]=(*arrayStart)[loopCount];
+    }
+  }
+  *arrayStart+=(short)bytes;
+  temp=*((unsigned long*)intPtr);
+  free(intPtr);
+  //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
+  return temp;
 }
