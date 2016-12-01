@@ -81,62 +81,63 @@ char* writeTo=CharsToSend;
 void setup() {
   // for communication with Pi
   Wire.begin(4);
-  //Wire.begin();
-  Wire.onRequest(requestEvent); // register event
+  
   
   //for GPS------------------------------------------------------------------------------------------
   Serial.begin(9600);
   Serial1.begin(9600);                     // Communicate at 9600 baud (default for PAM-7Q module)
-  delay(100);
-
+  
+  delay(1000);
+  
   // for Sensor------------------------------------------------------------------------------------------
   // Disable internal pullups, 10Kohms are on the breakout
   PORTC |= (1 << 4);
   PORTC |= (1 << 5);
   delay(100);
+  
   initial(ADDRESS);
-
-  GPSstuff(); 
-  SENSORstuff();
-  updateCharsToSend();
+  //GPSstuff(); 
+  //SENSORstuff();
+  //updateCharsToSend();
+  
+  Wire.onRequest(requestEvent); // register event
 }
 
 void loop() {
   //delay(1000);
-  //GPSstuff(); //delays 1 second
-  //SENSORstuff();
-
+  GPSstuff();
+  SENSORstuff();
+  updateCharsToSend();
   
-  //updateCharsToSend();
-  char* writeArray=CharsToSend;
-  char** wrPtr=&writeArray;
-  for (short i=0; i<22; i++ ){
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(CharsToSend[i], 16);
-  }
-  Serial.print('\n');
+//  char* writeArray=CharsToSend;
+//  char** wrPtr=&writeArray;
+//  for (short i=0; i<22; i++ ){
+//    Serial.print(i);
+//    Serial.print(": ");
+//    Serial.println(CharsToSend[i], 16);
+//  }
+//  Serial.print('\n');
   
-  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+//  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+//
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//
+//  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
+//  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
   
-  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-  
-  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-
-  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-
-  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
-  
-  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-
-  Serial.println((char)getIntFromByte(wrPtr,1));
-
-  Serial.println((char)getIntFromByte(wrPtr,1));
-
-  Serial.println((char)getIntFromByte(wrPtr,1));
-
   //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
-  //lineCount++;
+  lineCount++;
   
 
   delay(100);
@@ -146,25 +147,36 @@ void loop() {
 // function that executes whenever data is requested by master
 // this function is registered as an event, see setup()
 void requestEvent() {
-  
+  //GPSstuff();
+  //SENSORstuff();
+  //char* CharsToSend = updateCharsToSend();
+  //updateCharsToSend();
+  Wire.write(CharsToSend, 22); // respond with message of 24 byte
+  //updateCharsToSend();
   //Wire.write(CharsToSend, 22); // respond with message of 24 byte
-  Wire.write("Hi Everyonegkdkdkrlgv2");
-  GPSstuff(); 
-  SENSORstuff();
-  updateCharsToSend();
-  lineCount++;
+  //free(CharsToSend);
+  //Wire.write("0000000000000000000000");
+  //lineCount++;
+  //GPSstuff();
+  //SENSORstuff();
+  
+  
 }
 
+//char* updateCharsToSend(){
 void updateCharsToSend(){
   free(CharsToSend);
-  CharsToSend = malloc(22);
-  writeTo=CharsToSend;
+  char* CharsToSend = malloc(22);
+  char* writeTo=CharsToSend;
   unsigned long intBuflineCount;
   unsigned long longBuflatitude;
   unsigned long longBuflongitude;
   unsigned long intBufaltitude;
   unsigned int intBuftemperature;
   unsigned long intBufpressure;
+
+  GPSstuff();
+  SENSORstuff();
 
   //Line counter-------------------------------------------
   intBuflineCount = lineCount;
@@ -195,10 +207,12 @@ void updateCharsToSend(){
   CharsToSend[19] = endLine[0];
   CharsToSend[20] = endLine[1];
   CharsToSend[21] = endLine[2];
+
+  lineCount++;
 }
 
 
-unsigned long insertBytesFromInt(void* value,unsigned char** byteStart,int numberBytesToCopy){
+void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytesToCopy){
 
   unsigned char* valueBytes=value;
   short loopCount=0;
@@ -208,7 +222,7 @@ unsigned long insertBytesFromInt(void* value,unsigned char** byteStart,int numbe
   *byteStart+=(short)numberBytesToCopy;
 }
 
-long long getIntFromByte(unsigned char** arrayStart, short bytes){
+unsigned long long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
   char* intPtr=malloc (sizeof(unsigned long long));
@@ -235,7 +249,7 @@ long long getIntFromByte(unsigned char** arrayStart, short bytes){
 void GPSstuff() {
   bool newdata = false;
   int64_t start = millis();       // starts a count of millisec since the code began 
-  while (millis() - start < 50) {     // Update every 1 seconds
+  while (millis() - start < 250) {     // Update every 1 seconds
     if (feedgps())                      // if serial1 is available and can read gps.encode
       newdata = true;
   }
@@ -341,6 +355,7 @@ void initial(uint8_t address)
  Wire.beginTransmission(address);
  Wire.write(0x1E); // reset
  Wire.endTransmission();
+  
  delay(10);
  for (int i=0; i<6  ; i++) {
    Wire.beginTransmission(address);
