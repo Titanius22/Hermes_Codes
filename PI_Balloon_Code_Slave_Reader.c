@@ -13,7 +13,7 @@
 
 
 //Prototyping
-int getIntFromByte(unsigned char** ,short );
+unsigned long getIntFromByte(unsigned char** ,short);
 
 
 
@@ -50,23 +50,23 @@ int main(int argc, char* argv[]) {
 		
 		char* writeArray=buf;
 		char** wrPtr=&writeArray;
-		printf((unsigned int)getIntFromByte(wrPtr,3));
+		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,3));
 		  
-		printf((unsigned int)getIntFromByte(wrPtr,4));
+		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,4));
 		  
-		printf((unsigned int)getIntFromByte(wrPtr,4));
+		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,4));
 
-		printf((unsigned int)getIntFromByte(wrPtr,3));
+		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,3));
 
-		printf((unsigned int)getIntFromByte(wrPtr,2));
+		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,2));
 		  
-		printf((unsigned int)getIntFromByte(wrPtr,3));
+		printf("%d\n", (unsigned int)getIntFromByte(wrPtr,3));
 
-		printf((char)getIntFromByte(wrPtr,1));
+		printf("%c\n", (char)getIntFromByte(wrPtr,1));
 
-		printf((char)getIntFromByte(wrPtr,1));
+		printf("%c\n", (char)getIntFromByte(wrPtr,1));
 
-		printf((char)getIntFromByte(wrPtr,1));
+		printf("%c\n", (char)getIntFromByte(wrPtr,1));
 		
 		
 		//printf("%s\n", buf);
@@ -77,10 +77,10 @@ int main(int argc, char* argv[]) {
 	return (EXIT_SUCCESS);
 }
 
-long getIntFromByte(unsigned char** arrayStart, short bytes){
+unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
-  char* intPtr = malloc (sizeof(unsigned long));
+  unsigned char* intPtr = malloc (sizeof(unsigned long));
   unsigned long temp;
   //Void pointer to same location to return
 
