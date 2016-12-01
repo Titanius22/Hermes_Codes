@@ -73,6 +73,7 @@ int main(int argc, char* argv[]) {
 		
 		//printf("%s\n", buf);
 		nanosleep(&req,&rem);
+		lineCounter++;
 	}
 
 	close(file);
