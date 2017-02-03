@@ -82,51 +82,51 @@ int main(int argc, char *argv[])
 	char* writeTo=recvBuf;
 	
 	//Line counter-------------------------------------------
-	intBuflineCount = 150;
+	int intBuflineCount = 150;
 	insertBytesFromInt(&intBuflineCount, &writeTo, 3);
 
 	//Latitude 
-	longBuflatitude = (unsigned long)(29.172045 * 1000000);
+	long longBuflatitude = (unsigned long)(29.172045 * 1000000);
 	insertBytesFromInt(&longBuflatitude, &writeTo, 5);
 
 	//Longitude
-	longBuflongitude = (unsigned long)(81.078736 * 1000000);
+	long longBuflongitude = (unsigned long)(81.078736 * 1000000);
 	insertBytesFromInt(&longBuflongitude, &writeTo, 5);
 
 	//Altitude * 100--------------------------------------------
-	intBufaltitude = 1000 * 100;
+	int intBufaltitude = 1000 * 100;
 	insertBytesFromInt(&intBufaltitude, &writeTo, 3);
 
 	//Thermistor count------------------------------------------
-	intBuftemperature = 450;
+	int intBuftemperature = 450;
 	insertBytesFromInt(&intBuftemperature, &writeTo, 2);
 
 	//Battery Voltage---------------------------------------------
-	intBufpressure = 120;
+	int intBufpressure = 120;
 	insertBytesFromInt(&intBufpressure, &writeTo, 1);
 
 	//Magnotometer X---------------------------------------------
-	intBufpressure2 = 80;
+	int intBufpressure2 = 80;
 	insertBytesFromInt(&intBufpressure2, &writeTo, 1);
 
 	//Magnotometer Y---------------------------------------------
-	intBufpressure3 = 60;
+	int intBufpressure3 = 60;
 	insertBytesFromInt(&intBufpressure3, &writeTo, 1);
 
 	//Magnotometer Z---------------------------------------------
-	intBufpressure4 = 40;
+	int intBufpressure4 = 40;
 	insertBytesFromInt(&intBufpressure4, &writeTo, 1);
 
 	//Humidity---------------------------------------------
-	intBufpressure5 = 96;
+	int intBufpressure5 = 96;
 	insertBytesFromInt(&intBufpressure5, &writeTo, 1);
 
 	//Pressure---------------------------------------------
-	intBufpressure6 = 102300;
+	int intBufpressure6 = 102300;
 	insertBytesFromInt(&intBufpressure6, &writeTo, 4);
 
 	//Internal Temperature---------------------------------------------
-	intBufpressure7 = 15;
+	int intBufpressure7 = 15;
 	insertBytesFromInt(&intBufpressure7, &writeTo, 2);
 
 	//End of line chars-------------------------------------------

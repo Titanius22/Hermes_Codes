@@ -54,9 +54,9 @@ int main(int argc, char *argv[])
 		//int packetCount = 1;
 		int fileLineCount = 1;
 		char fileCounter[8];
-		//char filepath[] =  "/home/alarm/randomJunk/cCodeTests/";
+		char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
 		char fileName[] = "DistanceTest";
-		char mostFilePath[] = FREAKIN FIX MY ADDRESS "/home/alarm/randomJunk/cCodeTests/DistanceTest";
+		//char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/";
 		char fileExt[] = ".txt";
 		char fullFilePath[60];
 		FILE *filePointer;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 			
 				strcpy(fullFilePath, filepath);
 				strcat(fullFilePath, fileName);
-				strcpy(fullFilePath, mostFilePath);
+				//strcpy(fullFilePath, mostFilePath);
 				strcat(fullFilePath, fileCounter);
 				strcat(fullFilePath, fileExt);
 				
