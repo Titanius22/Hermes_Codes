@@ -15,6 +15,7 @@
 
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
+void insertBytesFromInt(void* ,unsigned char** , short);
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -32,7 +33,7 @@ int main(int argc, char *argv[])
 	int lineCount;
 	int fileCount;
 	char Data[200];
-	char recvBuf[25];
+	char recvBuf[35];
 	struct timespec req={0},rem={0};
 	//srand(time(NULL));
 	char fileCounter[8];
@@ -76,6 +77,64 @@ int main(int argc, char *argv[])
 	
 	req.tv_nsec = 50000000; //50ms
 	//int lineCounter = 1;
+	
+	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////
+	char* writeTo=recvBuf;
+	
+	//Line counter-------------------------------------------
+	intBuflineCount = 150;
+	insertBytesFromInt(&intBuflineCount, &writeTo, 3);
+
+	//Latitude 
+	longBuflatitude = (unsigned long)(29.172045 * 1000000);
+	insertBytesFromInt(&longBuflatitude, &writeTo, 5);
+
+	//Longitude
+	longBuflongitude = (unsigned long)(81.078736 * 1000000);
+	insertBytesFromInt(&longBuflongitude, &writeTo, 5);
+
+	//Altitude * 100--------------------------------------------
+	intBufaltitude = 1000 * 100;
+	insertBytesFromInt(&intBufaltitude, &writeTo, 3);
+
+	//Thermistor count------------------------------------------
+	intBuftemperature = 450;
+	insertBytesFromInt(&intBuftemperature, &writeTo, 2);
+
+	//Battery Voltage---------------------------------------------
+	intBufpressure = 120;
+	insertBytesFromInt(&intBufpressure, &writeTo, 1);
+
+	//Magnotometer X---------------------------------------------
+	intBufpressure2 = 80;
+	insertBytesFromInt(&intBufpressure2, &writeTo, 1);
+
+	//Magnotometer Y---------------------------------------------
+	intBufpressure3 = 60;
+	insertBytesFromInt(&intBufpressure3, &writeTo, 1);
+
+	//Magnotometer Z---------------------------------------------
+	intBufpressure4 = 40;
+	insertBytesFromInt(&intBufpressure4, &writeTo, 1);
+
+	//Humidity---------------------------------------------
+	intBufpressure5 = 96;
+	insertBytesFromInt(&intBufpressure5, &writeTo, 1);
+
+	//Pressure---------------------------------------------
+	intBufpressure6 = 102300;
+	insertBytesFromInt(&intBufpressure6, &writeTo, 4);
+
+	//Internal Temperature---------------------------------------------
+	intBufpressure7 = 15;
+	insertBytesFromInt(&intBufpressure7, &writeTo, 2);
+
+	//End of line chars-------------------------------------------
+
+	recvBuf[29] = 'E';
+	recvBuf[30] = 'N';
+	recvBuf[31] = 'D';
+	/////////////////////////////////////////////////////////REMOVE AFTER TEST////////////////////////////////////////////////////////////
 
     while(1)
     {
@@ -99,8 +158,9 @@ int main(int argc, char *argv[])
 		}*/
 		
 		while (1){
-			read(file, recvBuf, 22);
-			write(connfd, recvBuf, 22);
+			//read(file, recvBuf, 22);
+			
+			write(connfd, recvBuf, 32);
 		
 			/*if(lineCounter%10 == 0){
 				char* writeArray=buf;
@@ -160,4 +220,14 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
   free(intPtr);
   //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
   return temp;
+}
+
+void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytesToCopy){
+
+  unsigned char* valueBytes=value;
+  short loopCount=0;
+  for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
+    (*byteStart)[loopCount]=valueBytes[loopCount];
+  }
+  *byteStart+=(short)numberBytesToCopy;
 }

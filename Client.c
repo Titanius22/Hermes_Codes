@@ -8,12 +8,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h> 
+#include <arpa/inet.h>
+
+//prototyping
+unsigned long getIntFromByte(unsigned char** , short);
 
 int main(int argc, char *argv[])
 {
     int sockfd = 0, n = 0;
-    char recvBuff[25];
+    char recvBuff[200];
     struct sockaddr_in serv_addr; 
 
     if(argc != 2)
@@ -39,84 +42,121 @@ int main(int argc, char *argv[])
         return 1;
     } 
 
-    if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-       printf("\n Error : Connect Failed \n");
-       return 1;
-    } 
+	while(1){
 	
-	int fileCount = 1;
-	int packetCount = 1;
-	int fileLineCount = 1;
-	char fileCounter[8];
-	//char filepath[] =  "/home/alarm/randomJunk/cCodeTests/";
-	//char fileName[] = ";
-	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/cMajorTest";
-	char fileExt[] = ".txt";
-	char fullFilePath[60];
-	FILE *filePointer;
-	char leftOvers[25];
-	char* writeArray;
-	char** wrPtr;
-	
-	while ( (n = recv(sockfd, recvBuff, 22 , 0)) > 0)
-    {
-		// if (n != 200){
-			// fprintf(stderr, "What the jack just happen????     n: %d\n", n);
-		// }
+		if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+		{
+		   printf("\n Error : Connect Failed \n");
+		   return 1;
+		} 
 		
-		//if (fileLineCount == 1){ // && fileCount == 1){
-			//sprintf(fileCounter, "%d", fileCount);
+		int fileCount = 1;
+		//int packetCount = 1;
+		int fileLineCount = 1;
+		char fileCounter[8];
+		//char filepath[] =  "/home/alarm/randomJunk/cCodeTests/";
+		char fileName[] = "DistanceTest";
+		char mostFilePath[] = FREAKIN FIX MY ADDRESS "/home/alarm/randomJunk/cCodeTests/DistanceTest";
+		char fileExt[] = ".txt";
+		char fullFilePath[60];
+		FILE *filePointer;
+		char leftOvers[25];
+		char* writeArray;
+		char** wrPtr;
 		
-			//strcpy(fullFilePath, filepath);
-			//strcat(fullFilePath, fileName);
-			//strcpy(fullFilePath, mostFilePath);
-			//strcat(fullFilePath, fileCounter);
-			//strcat(fullFilePath, fileExt);
+		while ( (n = recv(sockfd, recvBuff, 32 , 0)) > 0)
+		{
+			// if (n != 200){
+				// fprintf(stderr, "What the jack just happen????     n: %d\n", n);
+			// }
 			
-			//filePointer = fopen(fullFilePath, "a");
-		//}
-	
-		//if (filePointer != NULL)
-		//{
-			//fwrite(&recvBuff, n, 1, filePointer);
-			if ((n == 22) && (packetCount%10 == 0)){
+			if (fileLineCount == 1){ // && fileCount == 1){
+				sprintf(fileCounter, "%04d", fileCount);
+			
+				strcpy(fullFilePath, filepath);
+				strcat(fullFilePath, fileName);
+				strcpy(fullFilePath, mostFilePath);
+				strcat(fullFilePath, fileCounter);
+				strcat(fullFilePath, fileExt);
+				
+				filePointer = fopen(fullFilePath, "a");
+			}
+		
+			if (filePointer != NULL)
+			{
+				fwrite(&recvBuff, n, 1, filePointer);
+						// if ((packetCount%10 == 0)){
+							 //char* writeArray=recvBuff;
+							 //char** wrPtr=&writeArray;
+							
+							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Line Counter
+					  
+							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,4)); // Longitude
+					  
+							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,4)); // Latitude
+
+							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Altitude
+
+							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); 
+					  
+							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+							// printf("%c", (char)getIntFromByte(wrPtr,1)); // 'E'
+ 
+							// printf("%c", (char)getIntFromByte(wrPtr,1)); // 'N'
+
+							// printf("%c\n", (char)getIntFromByte(wrPtr,1)); // 'D'
+						// }
+			}
+			recvBuff[n] = 0;
+			if(fputs(recvBuff, stdout) == EOF)
+			{
+			   printf("\n Error : Fputs error\n");
+			}
+			if(fileLineCount == 20){
+				
 				char* writeArray=recvBuff;
 				char** wrPtr=&writeArray;
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Line Counter
 		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
+				printf("%lu ", (unsigned long)getIntFromByte(wrPtr,5)); // Longitude
 		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
+				printf("%lu ", (unsigned long)getIntFromByte(wrPtr,5)); // Latitude
 
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Altitude
 
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); // External Thermistor
 		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Battery Voltage
 
-				printf("%c", (char)getIntFromByte(wrPtr,1));
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer X
 
-				printf("%c", (char)getIntFromByte(wrPtr,1));
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer Y
 
-				printf("%c\n", (char)getIntFromByte(wrPtr,1));
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer Z
+
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Humidity
+
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4)); // Pressure
+
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); // Internal Temperature
+				
+				printf("%c", (char)getIntFromByte(wrPtr,1)); // 'E'
+
+				printf("%c", (char)getIntFromByte(wrPtr,1)); // 'N'
+
+				printf("%c\n", (char)getIntFromByte(wrPtr,1)); // 'D'
+				
+				fileLineCount = 0;
+				fileCount++;
+				fclose(filePointer);
 			}
-		//}
-		//recvBuff[n] = 0;
-        //if(fputs(recvBuff, stdout) == EOF)
-        //{
-        //    printf("\n Error : Fputs error\n");
-        //}
-		//if(fileLineCount == 100){
-			//fileLineCount = 0;
-			//fileCount++;
-			//fclose(filePointer);
-		//}
-		//fileLineCount++;
-		packetCount++
-    }
-	//fclose(filePointer);
-	
+			fileLineCount++;
+			//packetCount++;
+		}
+		fclose(filePointer);
+	}
 
     if(n < 0)
     {
