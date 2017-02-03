@@ -66,11 +66,9 @@ int main(int argc, char *argv[])
 		
 		while ( (n = recv(sockfd, recvBuff, 32 , 0)) > 0)
 		{
-			// if (n != 200){
-				// fprintf(stderr, "What the jack just happen????     n: %d\n", n);
-			// }
 			
-			if (fileLineCount == 1){ // && fileCount == 1){
+			// At the start of every new "page", it creates and opens a new file
+			if (fileLineCount == 1){
 				sprintf(fileCounter, "%04d", fileCount);
 			
 				strcpy(fullFilePath, filepath);
@@ -81,38 +79,18 @@ int main(int argc, char *argv[])
 				
 				filePointer = fopen(fullFilePath, "a");
 			}
-		
+			
+			// Writes data to the document unconverted
 			if (filePointer != NULL)
 			{
-				fwrite(&recvBuff, n, 1, filePointer);
-						// if ((packetCount%10 == 0)){
-							 //char* writeArray=recvBuff;
-							 //char** wrPtr=&writeArray;
-							
-							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Line Counter
-					  
-							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,4)); // Longitude
-					  
-							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,4)); // Latitude
-
-							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Altitude
-
-							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); 
-					  
-							// printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
-
-							// printf("%c", (char)getIntFromByte(wrPtr,1)); // 'E'
- 
-							// printf("%c", (char)getIntFromByte(wrPtr,1)); // 'N'
-
-							// printf("%c\n", (char)getIntFromByte(wrPtr,1)); // 'D'
-						// }
+				fwrite(recvBuff, n, 1, filePointer);
 			}
+			
+			
 			recvBuff[n] = 0;
-			if(fputs(recvBuff, stdout) == EOF)
-			{
-			   printf("\n Error : Fputs error\n");
-			}
+			
+			
+			// Every 20 lines
 			if(fileLineCount == 20){
 				
 				char* writeArray=recvBuff;
