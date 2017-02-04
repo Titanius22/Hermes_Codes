@@ -20,9 +20,6 @@ void insertBytesFromInt(void* ,unsigned char** , short);
 // The slave Arduino address
 #define ADDRESS 0x04
 
-
-
-
 // The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
 static const char *devName = "/dev/i2c-1";
 
@@ -75,7 +72,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	req.tv_nsec = 50000000; //50ms
+	req.tv_nsec = 5000000; //5ms
 	//int lineCounter = 1;
 	
 	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////

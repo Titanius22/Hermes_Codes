@@ -1,17 +1,27 @@
 //http://www.thegeekstuff.com/2011/12/c-socket-programming/?utm_source=feedburner
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <netinet/in.h>
-#include <netdb.h>
+#include <arpa/inet.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h>
+#include <string.h>
+#include <sys/types.h>
+#include <time.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
 
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
+void insertBytesFromInt(void* ,unsigned char** , short);
+
+// The slave Arduino address
+#define ADDRESS 0x04
+
+// The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
+static const char *devName = "/dev/i2c-1";
 
 int main(int argc, char *argv[])
 {
@@ -19,12 +29,30 @@ int main(int argc, char *argv[])
     char recvBuff[200];
     struct sockaddr_in serv_addr; 
 
-    if(argc != 2)
+    // Checks that command is correct
+	if(argc != 2)
     {
         printf("\n Usage: %s <ip of server> \n",argv[0]);
         return 1;
     }
+	
+	// I2C STUFF. setting up i2c for communication
+	printf("I2C: Connecting\n");
+	int i2cFile;
 
+	if ((i2cFile = open(devName, O_RDWR)) < 0) {
+		fprintf(stderr, "I2C: Failed to access %d\n", devName);
+		exit(1);
+	}
+
+	printf("I2C: acquiring buss to 0x%x\n", ADDRESS);
+
+	if (ioctl(i2cFile, I2C_SLAVE, ADDRESS) < 0) {
+		fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);
+		exit(1);
+	}
+	
+	// Server stuff
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("\n Error : Could not create socket \n");
@@ -40,7 +68,7 @@ int main(int argc, char *argv[])
     {
         printf("\n inet_pton error occured\n");
         return 1;
-    } 
+    }
 
 	while(1){
 	
@@ -63,6 +91,7 @@ int main(int argc, char *argv[])
 		char leftOvers[25];
 		char* writeArray;
 		char** wrPtr;
+		char command = 1;
 		
 		while ( (n = recv(sockfd, recvBuff, 32 , 0)) > 0)
 		{
@@ -126,6 +155,11 @@ int main(int argc, char *argv[])
 
 				printf("%c\n", (char)getIntFromByte(wrPtr,1)); // 'D'
 				
+				// Send data over I2C
+				write(i2cFile, command, 1);
+				write(i2cFile, recvBuff+3, 13);
+				
+				// File tracking and counting
 				fileLineCount = 0;
 				fileCount++;
 				fclose(filePointer);
@@ -145,8 +179,6 @@ int main(int argc, char *argv[])
 }
 
 		
-		
-
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
@@ -168,4 +200,14 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
   free(intPtr);
   //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
   return temp;
+}
+
+void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytesToCopy){
+
+  unsigned char* valueBytes=value;
+  short loopCount=0;
+  for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
+    (*byteStart)[loopCount]=valueBytes[loopCount];
+  }
+  *byteStart+=(short)numberBytesToCopy;
 }
