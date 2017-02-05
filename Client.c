@@ -18,6 +18,10 @@ unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* ,unsigned char** , short);
 int tryNewSocketConnection(int);
 
+//Globals
+int ServerFileNum;
+struct sockaddr_in serv_addr; 
+
 // The slave Arduino address
 #define ADDRESS 0x04
 
@@ -27,17 +31,18 @@ static const char *devName = "/dev/i2c-1";
 int main(int argc, char *argv[])
 {
     char recvBuff[200];
-	int sockfd = 0, n = 0;
+	int n = 0;
 	int startingSocketNum = 5000;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 
-    // Checks that command is correct
-	if(argc != 2)
-    {
-        printf("\n Usage: %s <ip of server> \n",argv[0]);
-        return 1;
-    }
+    /////For when the ip address was a second argument
+	// Checks that command is correct
+	//if(argc != 2)
+    //{
+    //    printf("\n Usage: %s <ip of server> \n",argv[0]);
+    //    return 1;
+    //}
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -73,11 +78,11 @@ int main(int argc, char *argv[])
 	while(1){ 
 		
 		// If connection was made properly
-		if(sockfd = tryNewSocketConnection(startingSocketNum) >= 0){
+		if(ServerFileNum = tryNewSocketConnection(startingSocketNum) >= 0){
 		
 		
-			//while ( (n = recv(sockfd, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
-			while ( (n = read(sockfd, recvBuff, 32)) > 0)
+			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
+			while ( (n = read(ServerFileNum, recvBuff, 32)) > 0)
 			{
 				
 				// At the start of every new "page", it creates and opens a new file
@@ -167,11 +172,8 @@ int main(int argc, char *argv[])
 }
 
 //SERVER STUFF. setting up socket
-int tryNewSocketConnection(int socketNum){
-	
-	int ServerFileNum;
-	struct sockaddr_in serv_addr; 
-	
+void tryNewSocketConnection(int socketNum){
+		
     if((ServerFileNum = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("\n Error : Could not create socket \n");
@@ -183,7 +185,9 @@ int tryNewSocketConnection(int socketNum){
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(socketNum); 
 
-    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
+    // The arv[1] was originally the first trminal argument which was the ip address 
+	//if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
+	if(inet_pton(AF_INET, "10.1.1.232", &serv_addr.sin_addr)<=0)
     {
         printf("\n inet_pton error occured\n");
         return -1;
@@ -194,9 +198,6 @@ int tryNewSocketConnection(int socketNum){
 		printf("\n Error : Connect Failed \n");
 		return -1;
 	}
-	
-	return ServerFileNum;
-	
 }
 		
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
