@@ -16,6 +16,7 @@
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* ,unsigned char** , short);
+int tryNewSocketConnection(int);
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -25,9 +26,11 @@ static const char *devName = "/dev/i2c-1";
 
 int main(int argc, char *argv[])
 {
-    int sockfd = 0, n = 0;
     char recvBuff[200];
-    struct sockaddr_in serv_addr; 
+	int sockfd = 0, n = 0;
+	int startingSocketNum = 5000;
+	struct timespec req={0},rem={0};
+	req.tv_nsec = 500000000; //500ms
 
     // Checks that command is correct
 	if(argc != 2)
@@ -51,123 +54,108 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);
 		exit(1);
 	}
+
+	int fileCount = 1;
+	//int packetCount = 1;
+	int fileLineCount = 1;
+	char fileCounter[8];
+	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
+	char fileName[] = "DistanceTest";
+	//char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/";
+	char fileExt[] = ".txt";
+	char fullFilePath[60];
+	FILE *filePointer;
+	char leftOvers[25];
+	char* writeArray;
+	char** wrPtr;
+	char command = 1;
 	
-	// Server stuff
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("\n Error : Could not create socket \n");
-        return 1;
-    } 
-
-    memset(&serv_addr, '0', sizeof(serv_addr)); 
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(5000); 
-
-    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
-    {
-        printf("\n inet_pton error occured\n");
-        return 1;
-    }
-
-	while(1){
-	
-		if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-		{
-		   printf("\n Error : Connect Failed \n");
-		   return 1;
-		} 
+	while(1){ 
 		
-		int fileCount = 1;
-		//int packetCount = 1;
-		int fileLineCount = 1;
-		char fileCounter[8];
-		char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
-		char fileName[] = "DistanceTest";
-		//char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/";
-		char fileExt[] = ".txt";
-		char fullFilePath[60];
-		FILE *filePointer;
-		char leftOvers[25];
-		char* writeArray;
-		char** wrPtr;
-		char command = 1;
+		// If connection was made properly
+		if(sockfd = tryNewSocketConnection(startingSocketNum) >= 0){
 		
-		while ( (n = recv(sockfd, recvBuff, 32 , 0)) > 0)
-		{
-			
-			// At the start of every new "page", it creates and opens a new file
-			if (fileLineCount == 1){
-				sprintf(fileCounter, "%04d", fileCount);
-			
-				strcpy(fullFilePath, filepath);
-				strcat(fullFilePath, fileName);
-				//strcpy(fullFilePath, mostFilePath);
-				strcat(fullFilePath, fileCounter);
-				strcat(fullFilePath, fileExt);
-				
-				filePointer = fopen(fullFilePath, "a");
-			}
-			
-			// Writes data to the document unconverted
-			if (filePointer != NULL)
+		
+			//while ( (n = recv(sockfd, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
+			while ( (n = read(sockfd, recvBuff, 32)) > 0)
 			{
-				fwrite(recvBuff, n, 1, filePointer);
+				
+				// At the start of every new "page", it creates and opens a new file
+				if (fileLineCount == 1){
+					sprintf(fileCounter, "%04d", fileCount);
+				
+					strcpy(fullFilePath, filepath);
+					strcat(fullFilePath, fileName);
+					//strcpy(fullFilePath, mostFilePath);
+					strcat(fullFilePath, fileCounter);
+					strcat(fullFilePath, fileExt);
+					
+					filePointer = fopen(fullFilePath, "a");
+				}
+				
+				// Writes data to the document unconverted
+				if (filePointer != NULL)
+				{
+					fwrite(recvBuff, n, 1, filePointer);
+				}
+				
+				
+				recvBuff[n] = 0;
+				
+				
+				// Every 20 lines
+				if(fileLineCount == 80){
+					
+					char* writeArray=recvBuff;
+					char** wrPtr=&writeArray;
+					
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Line Counter
+			  
+					printf("%lu ", (unsigned long)getIntFromByte(wrPtr,5)); // Longitude
+			  
+					printf("%lu ", (unsigned long)getIntFromByte(wrPtr,5)); // Latitude
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Altitude
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); // External Thermistor
+			  
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Battery Voltage
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer X
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer Y
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer Z
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Humidity
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,4)); // Pressure
+
+					printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); // Internal Temperature
+					
+					printf("%c", (char)getIntFromByte(wrPtr,1)); // 'E'
+
+					printf("%c", (char)getIntFromByte(wrPtr,1)); // 'N'
+
+					printf("%c\n", (char)getIntFromByte(wrPtr,1)); // 'D'
+					
+					// Send data over I2C
+					write(i2cFile, command, 1);
+					write(i2cFile, recvBuff+3, 13);
+					
+					// File tracking and counting
+					fileLineCount = 0;
+					fileCount++;
+					fclose(filePointer);
+				}
+				fileLineCount++;
+				//packetCount++;
 			}
-			
-			
-			recvBuff[n] = 0;
-			
-			
-			// Every 20 lines
-			if(fileLineCount == 20){
-				
-				char* writeArray=recvBuff;
-				char** wrPtr=&writeArray;
-				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Line Counter
-		  
-				printf("%lu ", (unsigned long)getIntFromByte(wrPtr,5)); // Longitude
-		  
-				printf("%lu ", (unsigned long)getIntFromByte(wrPtr,5)); // Latitude
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3)); // Altitude
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); // External Thermistor
-		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Battery Voltage
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer X
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer Y
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Magnotometer Z
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1)); // Humidity
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4)); // Pressure
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2)); // Internal Temperature
-				
-				printf("%c", (char)getIntFromByte(wrPtr,1)); // 'E'
-
-				printf("%c", (char)getIntFromByte(wrPtr,1)); // 'N'
-
-				printf("%c\n", (char)getIntFromByte(wrPtr,1)); // 'D'
-				
-				// Send data over I2C
-				write(i2cFile, command, 1);
-				write(i2cFile, recvBuff+3, 13);
-				
-				// File tracking and counting
-				fileLineCount = 0;
-				fileCount++;
-				fclose(filePointer);
-			}
-			fileLineCount++;
-			//packetCount++;
+			fclose(filePointer);
 		}
-		fclose(filePointer);
+		
+		//delay
+		nanosleep(&req,&rem);
 	}
 
     if(n < 0)
@@ -178,6 +166,38 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+//SERVER STUFF. setting up socket
+int tryNewSocketConnection(int socketNum){
+	
+	int ServerFileNum;
+	struct sockaddr_in serv_addr; 
+	
+    if((ServerFileNum = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        printf("\n Error : Could not create socket \n");
+        return -1;
+    } 
+
+    memset(&serv_addr, '0', sizeof(serv_addr)); 
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(socketNum); 
+
+    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
+    {
+        printf("\n inet_pton error occured\n");
+        return -1;
+    }
+	
+	if( connect(ServerFileNum, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	{
+		printf("\n Error : Connect Failed \n");
+		return -1;
+	}
+	
+	return ServerFileNum;
+	
+}
 		
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 

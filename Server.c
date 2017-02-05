@@ -16,6 +16,7 @@
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
+int tryNewSocketConnection(int);
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -34,9 +35,9 @@ int main(int argc, char *argv[])
 	struct timespec req={0},rem={0};
 	//srand(time(NULL));
 	char fileCounter[8];
+	int startingSocketNum = 5000;
 	
-	int listenfd = 0, connfd = 0;
-    struct sockaddr_in serv_addr; 
+	int connfd = 0;
 	
 	//for(letterCount=0;letterCount<199;letterCount++){
 	//			letter=rand()%(127-32)+32;
@@ -44,17 +45,7 @@ int main(int argc, char *argv[])
 	//	}
 	//Data[199] = 10;
 
-    //SERVER STUFF. setting up socket
-	listenfd = socket(AF_INET, SOCK_STREAM, 0);
-    memset(&serv_addr, '0', sizeof(serv_addr));
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(5000); 
-
-    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
-
-    listen(listenfd, 10);
+    
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -72,6 +63,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
+	//set sleep duration
 	req.tv_nsec = 5000000; //5ms
 	//int lineCounter = 1;
 	
@@ -135,7 +127,7 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL); 
+        connfd = tryNewSocketConnection(startingSocketNum);
 		
 		//Data[0] = "1"; ////////////////////////////////////////////////////////////////used for counting lines
 		/*write(connfd, Data, 200);
@@ -157,7 +149,7 @@ int main(int argc, char *argv[])
 		while (1){
 			//read(file, recvBuf, 22);
 			
-			write(connfd, recvBuf, 32);
+			printf("%d\n", write(connfd, recvBuf, 32));
 		
 			/*if(lineCounter%10 == 0){
 				char* writeArray=buf;
@@ -187,13 +179,36 @@ int main(int argc, char *argv[])
 		}
 		close(file);
 		
-		
-		
 		fprintf(stderr, "Finished sending");
         close(connfd);
         sleep(1);
     }
 	 
+}
+
+//SERVER STUFF. setting up socket
+int tryNewSocketConnection(int socketNum){
+	
+	int listenfd = 0;
+    struct sockaddr_in serv_addr;
+	int ServerFileNum;
+	
+	
+	listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    memset(&serv_addr, '0', sizeof(serv_addr));
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serv_addr.sin_port = htons(startingSocketNum); 
+
+    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
+
+    listen(listenfd, 10);
+	
+	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
+	
+	return ServerFileNum;
+	
 }
 
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
