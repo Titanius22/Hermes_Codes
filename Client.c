@@ -22,7 +22,7 @@ int tryNewSocketConnection();
 int ServerFileNum;
 struct sockaddr_in serv_addr;
 int startingSocketNum = 5000;
-bool madeConnection = false; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
+short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
 	char* writeArray;
 	char** wrPtr;
 	char command[25];
-	int madeConnection = 0; //becomes 1 when connection is made. If connection is lost afterwards (meaning when madeConnection is 1), the port number is incremented and madeConnection is set to 0 till another connection is found.
 	
 	unsigned int DataLineCounter;
 	unsigned long DataGPS[3]; // Longitude, Latitude, Altitude
@@ -203,7 +202,7 @@ int tryNewSocketConnection(){
 	}
 	
 	// Makes varible free
-	serv_addr = {0};
+	//////////////////////////////////////////////////////////////////////////serv_addr = {0};
 	
 	if((ServerFileNum = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
