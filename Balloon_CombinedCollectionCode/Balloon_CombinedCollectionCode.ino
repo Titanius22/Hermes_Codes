@@ -87,7 +87,7 @@ void setup() {
   Serial.begin(74880);
   Serial1.begin(9600);                     // Communicate at 9600 baud (default for PAM-7Q module)
   
-  delay(1000);
+  delay(200);
   
   // for Sensor------------------------------------------------------------------------------------------
   // Disable internal pullups, 10Kohms are on the breakout
@@ -107,7 +107,7 @@ void loop() {
   //delay(1000);
   GPSstuff();
   SENSORstuff();
-  updateCharsToSend();
+  //updateCharsToSend();
   
   char* writeArray=CharsToSend;
   char** wrPtr=&writeArray;
@@ -120,21 +120,21 @@ void loop() {
   
   Serial.println((unsigned long)getIntFromByte(wrPtr,3));
   
-  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-  
-  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-
-  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-
-  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
-  
-  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-
-  Serial.println((char)getIntFromByte(wrPtr,1));
-
-  Serial.println((char)getIntFromByte(wrPtr,1));
-
-  Serial.println((char)getIntFromByte(wrPtr,1));
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+//  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+//
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//
+//  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
+//  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
   
   //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
   //lineCount++; // increments in updateCharsToSend
@@ -150,11 +150,13 @@ void requestEvent() {
   //SENSORstuff();
   //char* CharsToSend = updateCharsToSend();
   //updateCharsToSend();
+  lineCount++;
+  updateCharsToSend();
   Wire.write(CharsToSend, 22); // respond with message of 24 byte
   //updateCharsToSend();
   //free(CharsToSend);
   //Wire.write("ftgyho04856000r57j0k?0");
-  //lineCount++;
+  
   //GPSstuff();
   //SENSORstuff();
   
@@ -203,7 +205,7 @@ void updateCharsToSend(){
   CharsToSend[20] = endLine[1];
   CharsToSend[21] = endLine[2];
 
-  lineCount++;
+  //lineCount++;
 }
 
 

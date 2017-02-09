@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
 				//
 				// 1ms seems to be enough but it depends on what workload it has
 				req.tv_nsec = 10000000; //10ms
-				nanosleep(req,rem);
+				nanosleep(&req,&rem);
 
 				if (read(file, buf, 1) == 1) {
 					if ((signed int) buf[0] == 1){
@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
 				//
 				// 1ms seems to be enough but it depends on what workload it has
 				req.tv_nsec = 10000000; //10ms
-				nanosleep(req,rem);
+				nanosleep(&req,&rem);
 
 				if (read(file, buf, 7) == 7) {
 					
