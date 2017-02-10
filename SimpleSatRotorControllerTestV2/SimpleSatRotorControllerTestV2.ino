@@ -196,6 +196,17 @@ boolean _elevationMove = false;   // elevation move needed
 String azRotorMovement;   // string for az rotor move display
 String elRotorMovement;   // string for el rotor move display
 
+
+// ------------------------------------------------------------
+// ------ Variables for the code to run -----
+// ------------------------------------------------------------
+
+boolean recievedNewI2Cdata = false;
+String RecievedData;
+char ch;
+int valueindex;
+String temp = "";
+
 int j;
 
 //
@@ -239,7 +250,7 @@ void setup()
 
 
 //
-// main program loop
+// //*************************************************************************///Start main program loop//*****************************************************************************//
 //
 void loop() 
 {
@@ -300,6 +311,87 @@ void loop()
          Serial.print("AZ Voltage Read: ");
          */
          Serial.println((float)analogRead(_azimuthInputPin)*5/1024);
+
+         if (recievedNewI2Cdata){
+
+            //unsigned long FirstNum, el; 
+            //unsigned long long lat, lon; 
+            
+            
+            
+            while(Wire.available()) {
+              ch = Wire.read();
+              RecievedData += ch;
+              //dataChArray[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
+              //Serial.println(dataChArray[i]);
+              //data[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
+              //dataChArray =+ Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
+              //Serial.println(data[i]);
+              i++;
+            }
+            
+            Serial.print(RecievedData);
+            Serial.println("||||||||||||||||");
+            //Serial.println(RecievedData);
+            
+            //RecievedData += ' '; // adds a space to the end of the last number to have it recognized in the for loop
+            //RecievedData = String(FirstNum + ' ' + lat + ' ' + lon + ' ' + el + ' ');
+            //Serial.println(RecievedData);
+            valueindex = 1;
+            for (j=2; j<=RecievedData.length(); j++){                                   // GOES THROUGH EVERY CHAR IN THE DATA
+              if(RecievedData.charAt(0)=='1'){/////////////////////for GS values
+                if(RecievedData.charAt(j)==' '){                                        //IF IT HITS A SPACE 
+                  if(valueindex==1){groundStationlat = (temp.toFloat());}       //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
+                  else if(valueindex==2){groundStationlon = (temp.toFloat());}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
+                  else if(valueindex==3){groundStationAlt = (temp.toFloat()); break;}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
+                  temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TEMPARRAY VALUE 
+                  valueindex = valueindex + 1;
+                }else{
+                  temp = temp + RecievedData.charAt(j);
+                }                                // MODIFIES THE TEMPARARY VALUE
+              }else if(RecievedData.charAt(0)=='2') {//////////////for balloon values
+                if(RecievedData.charAt(j)==' '){                                        //IF IT HITS A SPACE
+                  if(valueindex==1){balloonLat = (temp.toFloat());}             //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
+                  else if(valueindex==2){balloonLon = (temp.toFloat());}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
+                  else if(valueindex==3){balloonAlt = (temp.toFloat()); break;}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
+                  temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TMPARRAY VALUE 
+                  valueindex = valueindex + 1;
+                }
+                temp = temp + RecievedData.charAt(j);                                   // MODIFIES THE TEMPARARY VALUE
+              }else if(RecievedData.charAt(0)=='3') {/////////////////////for balloon values
+                j = 1; //This is so the remove function below knows where to stop deleting. Commands 1 and 2 stop at the space after the last number, by making j = 1, it is doing the same thing. 
+
+        
+        
+        //sendData(RecievedData);
+        
+        
+        
+              }
+            }
+            //balloonLat = balloonLat/100000;
+            //balloonLon = balloonLon/100000;
+            //balloonAlt = balloonAlt/100;
+            Serial.print("balloonLat: ");
+            Serial.println(balloonLat);
+            Serial.print("balloonLon: ");
+            Serial.println(balloonLon);
+            Serial.print("balloonAlt: ");
+            Serial.println(balloonAlt);
+
+
+      RecievedData.remove(0, j+1); // removes old data
+      if(RecievedData.length() == 0){
+        
+        recievedNewI2Cdata = false;
+        
+      }
+      // else more commands need to be read from the wire buffer so recievedNewI2Cdata will remain true till all is read
+            
+
+
+          
+         }
          
          if ( (abs(_rotorAzimuth - _newAzimuth) > _closeEnough) && _azimuthMove ) { // see if azimuth move is required
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -380,6 +472,8 @@ void loop()
    }
 }
 
+//*************************************************************************///End main program loop//*****************************************************************************//
+
 
 //MAIN LOOP
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,75 +484,10 @@ void loop()
 
 // callback for received data
 void receiveData(){ // should not accept any values
- delay(500);
- String data;
- //char data[14];
- char ch;
- int c, valueindex;
- String temp = "";
- unsigned long FirstNum, el; 
- unsigned long long lat, lon; 
- char dataChArray[14];  // Use to read in the 12 chars of the recieved data
- int i = 0;
-
- Serial.println("Recieved Stuff");
- while(Wire.available()) {
-  ch = Wire.read();
-  data = String(data + ch);
-  //dataChArray[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-  //Serial.println(dataChArray[i]);
-  //data[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-  //dataChArray =+ Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-  //Serial.println(data[i]);
-  i++;
- }
- Serial.println(data);
- //Serial.println(data);
- /*char* writeArray=dataChArray;
- char** wrPtr=&writeArray;
   
-  FirstNum = (unsigned long)getIntFromByte(wrPtr,1);
-  if (FirstNum != 3) {
-    lat = (unsigned long long)getIntFromByte(wrPtr,5);
-    lon = (unsigned long long)getIntFromByte(wrPtr,5);
-    el = (unsigned long)getIntFromByte(wrPtr,3);
-  }
-  Serial.println(FirstNum);
-  Serial.println((long)lat);
-  Serial.println((long)lon);
-  Serial.println(el);*/
+  recievedNewI2Cdata = true;
   
-  
-  //string data = 
- 
- data = data + ' '; // adds a space to the end of the last number to have it recognized in the for loop
- //data = String(FirstNum + ' ' + lat + ' ' + lon + ' ' + el + ' ');
- //Serial.println(data);
- valueindex = 1;
-  for (c=2; c<=data.length(); c++){                                   // GOES THROUGH EVERY CHAR IN THE DATA
-    if(data.charAt(0)=='1'){/////////////////////for GS values
-      if(data.charAt(c)==' '){                                        //IF IT HITS A SPACE 
-        if(valueindex==1){groundStationlat = temp.toFloat();}       //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-        else if(valueindex==2){groundStationlon = temp.toFloat();}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-        else if(valueindex==3){groundStationAlt = temp.toFloat();}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-        temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TMPARRAY VALUE 
-        valueindex = valueindex + 1;
-      }else{
-      temp = temp + data.charAt(c);
-      }                                // MODIFIES THE TEMPARARY VALUE
-    }else if(data.charAt(0)=='2') {//////////////for balloon values
-      if(data.charAt(c)==' '){                                        //IF IT HITS A SPACE
-        if(valueindex==1){balloonLat = temp.toFloat();}             //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-        else if(valueindex==2){balloonLon = temp.toFloat();}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-        else if(valueindex==3){balloonAlt = temp.toFloat();}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-        temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TMPARRAY VALUE 
-        valueindex = valueindex + 1;
-      }
-      temp = temp + data.charAt(c);                                   // MODIFIES THE TEMPARARY VALUE
-    }else if(data.charAt(0)=='3') {/////////////////////for balloon values
-      //sendData(data);
-    }
-  }
+  Serial.println("Recieved Stuff");
 }
 
 
@@ -692,18 +721,18 @@ String CreateCommand(float balloonLon, float balloonLat, float balloonAlt, float
   Elevation = (Elevation*180)/pi;
   command = "W";
   if (Azimuth <= 9){
-     command = command + "00" + String(int(Azimuth)) + " ";
+    command = command + "00" + String(int(Azimuth)) + " ";
   } else if (Azimuth <= 99){
-     command = command + "0" + String(int(Azimuth)) + " ";
+    command = command + "0" + String(int(Azimuth)) + " ";
   } else {
-     command = command + String(int(Azimuth)) + " ";
+    command = command + String(int(Azimuth)) + " ";
   }
   if (Elevation <= 9){
-     command = command + "00" + String(int(Elevation));
+    command = command + "00" + String(int(Elevation));
   } else if (Elevation <= 99){
-     command = command + "0" + String(int(Elevation));
+    command = command + "0" + String(int(Elevation));
   } else {
-     command = command + String(int(Elevation));
+    command = command + String(int(Elevation));
   }
   
   return command;
