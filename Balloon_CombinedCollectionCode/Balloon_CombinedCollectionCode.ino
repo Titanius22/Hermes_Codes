@@ -78,6 +78,11 @@ char endLine[3] = {'E', 'N', 'D'};
 char* CharsToSend = malloc(22);
 char* writeTo=CharsToSend;
 
+//For timing to sample rates
+boolean isReadyGPS = false;
+boolean isReadyPressure = false;
+boolean isReadyInternalTemp = false;
+
 void setup() {
   // for communication with Pi
   Wire.begin(4);
@@ -109,37 +114,38 @@ void loop() {
   SENSORstuff();
   //updateCharsToSend();
   
-  char* writeArray=CharsToSend;
-  char** wrPtr=&writeArray;
-//  for (short i=0; i<22; i++ ){
-//    Serial.print(i);
-//    Serial.print(": ");
-//    Serial.println(CharsToSend[i], 16);
-//  }
-//  Serial.print('\n');
+  if (){
+   char* writeArray=CharsToSend;
+   char** wrPtr=&writeArray;
+   //  for (short i=0; i<22; i++ ){
+   //    Serial.print(i);
+   //    Serial.print(": ");
+   //    Serial.println(CharsToSend[i], 16);
+   //  }
+   //  Serial.print('\n');
   
-  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+   Serial.println((unsigned long)getIntFromByte(wrPtr,3));
   
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-//  
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-//
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-//
-//  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
-//  
-//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-//
-//  Serial.println((char)getIntFromByte(wrPtr,1));
-//
-//  Serial.println((char)getIntFromByte(wrPtr,1));
-//
-//  Serial.println((char)getIntFromByte(wrPtr,1));
+   Serial.println((unsigned long)getIntFromByte(wrPtr,4));
   
-  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
-  //lineCount++; // increments in updateCharsToSend
+   Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+
+   Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+
+   Serial.println((unsigned int)getIntFromByte(wrPtr,2));
   
-  delay(100);
+   Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+
+   Serial.println((char)getIntFromByte(wrPtr,1));
+
+   Serial.println((char)getIntFromByte(wrPtr,1));
+
+   Serial.println((char)getIntFromByte(wrPtr,1));
+  
+   //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
+   //lineCount++; // increments in updateCharsToSend
+  }
+   delay(100);
 }
 
 
@@ -345,6 +351,7 @@ long getVal(int address, byte code)
  Wire.endTransmission();
  return ret;
 }
+
 
 void initial(uint8_t address)
 {

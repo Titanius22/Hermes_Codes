@@ -22,6 +22,7 @@ void loop() {
 
 void receiveEvent(int howMany) {
   recievedStr = "";
+  Serial.println("working");
   while (Wire.available()) { // slave may send less than requested
     c = Wire.read(); // receive a byte as character
     //Serial.println(c);

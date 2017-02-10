@@ -166,8 +166,7 @@ int main(int argc, char *argv[])
 					printf("%c\n", DataEndLine[2]); // 'D'
 					
 					// Send data over I2C
-					
-					sprintf(command, "1 %lu %lu %d", DataGPS[0], DataGPS[1], DataGPS[2]);
+					sprintf(command, "1 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 					write(i2cFile, command, strlen(command));
 					
 					// File tracking and counting
