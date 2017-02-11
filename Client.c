@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
 		
 		
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
+			while ( (n = read(ServerFileNum, recvBuff, lineLength*3)) > 0) 
 			{
 				
 				// At the start of every new "page", it creates and opens a new file
