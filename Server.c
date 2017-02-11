@@ -16,7 +16,8 @@
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
-int tryNewSocketConnection(int);
+int tryNewSocketConnection();
+void SetNewData();
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -32,9 +33,7 @@ short madeConnection = 0; //becomes true when connection is made. If connection 
 FILE *SocketNumFile;
 char SocketNumFileData[5];
 
-	
-	
-	
+
 int main(int argc, char *argv[])
 {
     struct timespec req={0},rem={0};
@@ -61,9 +60,9 @@ int main(int argc, char *argv[])
 	req.tv_nsec = 5000000; //5ms
 	
 	//look at SocketNum file to check what number to start with
-	SocketNumFile = fopen(SocketNumFileName, "r+");
+	SocketNumFile = fopen(SocketNumFileName, "r");
 	fread(SocketNumFileData, 2, 1, SocketNumFile);
-	rewind(SocketNumFile); //puts pointer back to the top of the page
+	close(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 	
 	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////
@@ -117,7 +116,7 @@ int main(int argc, char *argv[])
 
 void SetNewData(){
 	
-	writeTo=recvBuf;
+	char* writeTo=recvBuf;
 	
 	//Line counter-------------------------------------------
 	int intBuflineCount = 150;
@@ -266,11 +265,14 @@ int tryNewSocketConnection(){
     serv_addr.sin_port = htons(startingSocketNum); 
 
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-    listen(listenfd, 10)
+    listen(listenfd, 10);
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 	
-	SocketNumFileData[1] += 1; //increments the socket number by 1 
+	//Only makes it this far if none of the above errors have occured
+	SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
+	SocketNumFile = fopen(SocketNumFileName, "w");
 	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
+	close(SocketNumFile);
 	
 	madeConnection = 1;
 	

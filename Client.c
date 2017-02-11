@@ -67,9 +67,9 @@ int main(int argc, char *argv[])
 	}
 	
 	//look at SocketNum file to check what number to start with
-	SocketNumFile = fopen(SocketNumFileName, "r+");
+	SocketNumFile = fopen(SocketNumFileName, "r");
 	fread(SocketNumFileData, 2, 1, SocketNumFile);
-	rewind(SocketNumFile); //puts pointer back to the top of the page
+	close(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 
 	int fileCount = 1;
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 						//printf("%c\n", DataEndLine[2]); // 'D'
 						
 						// Send data over I2C
-						sprintf(command, "1 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
+						sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 						write(i2cFile, command, strlen(command));
 					}
 					
@@ -274,8 +274,11 @@ int tryNewSocketConnection(){
 		return -1;
 	}
 	
+	//Only makes it this far if none of the above errors have occured
 	SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
+	SocketNumFile = fopen(SocketNumFileName, "w");
 	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
+	close(SocketNumFile);
 	
 	madeConnection = 1;
 	
