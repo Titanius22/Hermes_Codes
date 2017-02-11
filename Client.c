@@ -15,14 +15,17 @@
 
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
-void insertBytesFromInt(void* ,unsigned char** , short);
+void insertBytesFromInt(void* , unsigned char** , short);
 int tryNewSocketConnection();
+short findOffset(char , short , short);
 
 //Globals
 int ServerFileNum;
 struct sockaddr_in serv_addr;
-int startingSocketNum = 5000;
+//unsigned short startingSocketNum = 5000;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
+short lineLength = 32;
+char SocketNumberFileData[5];
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -32,7 +35,7 @@ static const char *devName = "/dev/i2c-1";
 
 int main(int argc, char *argv[])
 {
-    char recvBuff[200];
+    char recvBuff[100];
 	int n = 0;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
@@ -60,21 +63,25 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);
 		exit(1);
 	}
+	
+	//look at SocketNum file to check what number to start with
+	SocketNumberFile = fopen(SocketNumFileName, "w+");
+	read(SocketNumberFile, SocketNumberFileData, 2);
+	startingSocketNum = SocketNumberFileData[0] << 8 | SocketNumberFileData[1];
 
 	int fileCount = 1;
-	//int packetCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
 	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
 	char fileName[] = "DistanceTest";
-	//char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/";
 	char fileExt[] = ".txt";
 	char fullFilePath[80];
 	FILE *filePointer;
-	char leftOvers[25];
+	//char leftOvers[25];
 	char* writeArray;
 	char** wrPtr;
 	char command[25];
+	int offset;
 	
 	unsigned int DataLineCounter;
 	unsigned long DataGPS[3]; // Longitude, Latitude, Altitude
@@ -88,7 +95,6 @@ int main(int argc, char *argv[])
 		
 		
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
-			while ( (n = read(ServerFileNum, recvBuff, 32)) > 0)
 			{
 				
 				// At the start of every new "page", it creates and opens a new file
@@ -115,59 +121,63 @@ int main(int argc, char *argv[])
 				
 				
 				// Every 20 lines
-				if(fileLineCount == 80){
+				if(fileLineCount == 2000){
 					
-					char* writeArray=recvBuff;
-					char** wrPtr=&writeArray;
+					offset = findOffset(recvBuff, n, lineLength);
 					
-					DataLineCounter = (unsigned int)getIntFromByte(wrPtr,3);
-					printf("%d ", DataLineCounter); // Line Counter
-			  
-					DataGPS[0] = (unsigned long)getIntFromByte(wrPtr,5);
-					printf("%lu ", DataGPS[0]); // Longitude
-			  
-					DataGPS[1] = (unsigned long)getIntFromByte(wrPtr,5);
-					printf("%lu ", DataGPS[1]); // Latitude
+					if(offset >= 0){
+						writeArray=recvBuff[offset];
+						wrPtr=&writeArray;
+						
+						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,3);
+						//printf("%d ", DataLineCounter); // Line Counter
+				  
+						DataGPS[0] = (unsigned long)getIntFromByte(wrPtr,5);
+						//printf("%lu ", DataGPS[0]); // Longitude
+				  
+						DataGPS[1] = (unsigned long)getIntFromByte(wrPtr,5);
+						//printf("%lu ", DataGPS[1]); // Latitude
 
-					DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
-					printf("%d ", DataGPS[2]); // Altitude
+						DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
+						//printf("%d ", DataGPS[2]); // Altitude
 
-					DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
-					printf("%d ", DataSensors[0]); // External Thermistor
-			  
-					DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
-					printf("%d ", DataSensors[1]); // Battery Voltage
+						DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
+						//printf("%d ", DataSensors[0]); // External Thermistor
+				  
+						DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
+						//printf("%d ", DataSensors[1]); // Battery Voltage
 
-					DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
-					printf("%d ", DataSensors[2]); // Magnotometer X
+						DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
+						//printf("%d ", DataSensors[2]); // Magnotometer X
 
-					DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
-					printf("%d ", DataSensors[3]); // Magnotometer Y
+						DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
+						//printf("%d ", DataSensors[3]); // Magnotometer Y
 
-					DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
-					printf("%d ", DataSensors[4]); // Magnotometer Z
+						DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
+						//printf("%d ", DataSensors[4]); // Magnotometer Z
 
-					DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
-					printf("%d ", DataSensors[5]); // Humidity
+						DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
+						//printf("%d ", DataSensors[5]); // Humidity
 
-					DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,4);
-					printf("%d ", DataSensors[6]); // Pressure
+						DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,4);
+						//printf("%d ", DataSensors[6]); // Pressure
 
-					DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,2);
-					printf("%d ", DataSensors[7]); // Internal Temperature
-					
-					DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
-					printf("%c", DataEndLine[0]); // 'E'
+						DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,2);
+						//printf("%d ", DataSensors[7]); // Internal Temperature
+						
+						DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
+						//printf("%c", DataEndLine[0]); // 'E'
 
-					DataEndLine[1] = (char)getIntFromByte(wrPtr,1);
-					printf("%c", DataEndLine[1]); // 'N'
+						DataEndLine[1] = (char)getIntFromByte(wrPtr,1);
+						//printf("%c", DataEndLine[1]); // 'N'
 
-					DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
-					printf("%c\n", DataEndLine[2]); // 'D'
-					
-					// Send data over I2C
-					sprintf(command, "1 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
-					write(i2cFile, command, strlen(command));
+						DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
+						//printf("%c\n", DataEndLine[2]); // 'D'
+						
+						// Send data over I2C
+						sprintf(command, "1 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
+						write(i2cFile, command, strlen(command));
+					}
 					
 					// File tracking and counting
 					fileLineCount = 0;
@@ -191,6 +201,36 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+
+// If the recieved data is offset by n number of chars, the function will find n assuming the line ends with "END" and is as long as defined
+/*///////////////////////////////////////EXAMPLE//////////////////////////////////////
+correct data line: 123456789END
+
+potential recvArray to be sent into the function: 3456789END123456789END12
+the function will return 10.
+
+potential recvArray to be sent into the function: 3456789END123456789EN
+the function will return -1 because a complete string of 123456789END can't be achieved.
+*/
+short findOffset(char recvArray[], short lengthOfArray, short lengthOfLine){
+	short result = -1;
+	short i;
+	
+	i = lengthOfLine - 3; // -1 puts it at the end of the potential Dataline, -3 puts is at the potential 'E'
+	
+	// This will keep looping through the array till it finds an 'E' followed by an 'N' and a 'D' or is hits the end and will return a -1
+	while(i < lengthOfArray-2){ // its lengthOfArray-2 because 'E', 'N', and 'D' must match. If it reaches lengthOfArray-2, there couldn't be 'E', 'N', and 'D'.
+		if(recvArray[i] == 'E'){
+			if (recvArray[i+1] == 'N' && recvArray[i+2] == 'D'){
+				result = i - (lengthOfLine-2) + 1; //the element in the recvArray that starts the propper data line
+				break;
+			}
+		}
+	}
+	return result;
+}
+
 
 //SERVER STUFF. setting up socket
 int tryNewSocketConnection(){
@@ -222,11 +262,14 @@ int tryNewSocketConnection(){
         return -1;
     }
 	
-	if( connect(ServerFileNum, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	if(connect(ServerFileNum, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{
 		printf("\n Error : Connect Failed \n");
 		return -1;
 	}
+	
+	SocketNumberFileData[1] += 1; //increments the socket number by 1 
+	write(SocketNumberFile, SocketNumberFileData, 2);
 	
 	madeConnection = 1;
 	

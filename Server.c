@@ -23,29 +23,23 @@ int tryNewSocketConnection(int);
 
 // The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
 static const char *devName = "/dev/i2c-1";
+static const char *SocketNumFileName = "SocketNum.txt";
 
+//Globals
+char recvBuf[100];
+//unsigned short startingSocketNum
+short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
+FILE *SocketNumberFile;
+char SocketNumberFileData[5];
+
+	
+	
+	
 int main(int argc, char *argv[])
 {
-    //char letter=0;
-	//int letterCount;
-	int lineCount;
-	int fileCount;
-	char Data[200];
-	char recvBuf[35];
-	struct timespec req={0},rem={0};
-	//srand(time(NULL));
-	char fileCounter[8];
-	int startingSocketNum = 5000;
-	
+    struct timespec req={0},rem={0};
 	int connfd = 0;
-	
-	//for(letterCount=0;letterCount<199;letterCount++){
-	//			letter=rand()%(127-32)+32;
-	//			Data[letterCount] = letter;
-	//	}
-	//Data[199] = 10;
-
-    
+	short connectionError = 0;
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -65,21 +59,79 @@ int main(int argc, char *argv[])
 	
 	//set sleep duration
 	req.tv_nsec = 5000000; //5ms
-	//int lineCounter = 1;
+	
+	//look at SocketNum file to check what number to start with
+	SocketNumberFile = fopen(SocketNumFileName, "w+");
+	read(SocketNumberFile, SocketNumberFileData, 2);
+	startingSocketNum = SocketNumberFileData[0] << 8 | SocketNumberFileData[1];
 	
 	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////
-	char* writeTo=recvBuf;
+	SetNewData();
+	/////////////////////////////////////////////////////////REMOVE AFTER TEST////////////////////////////////////////////////////////////
+
+    while(1)
+    {
+        connfd = tryNewSocketConnection();
+		
+		while (connectionError >= 0){
+			//read(file, recvBuf, 22);
+			
+			connectionError = write(connfd, recvBuf, 96);
+			/*if(lineCounter%10 == 0){
+				char* writeArray=buf;
+				char** wrPtr=&writeArray;
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+			
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
+		  
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
+
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+		  
+				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+				printf("%c", (char)getIntFromByte(wrPtr,1));
+
+				printf("%c", (char)getIntFromByte(wrPtr,1));
+
+				printf("%c\n", (char)getIntFromByte(wrPtr,1));
+			}*/
+		
+			//printf("%s\n", buf);
+			//nanosleep(&req,&rem);
+			//lineCounter++;
+		}
+		
+		//delay
+		nanosleep(&req,&rem);
+		
+		
+    }
+	fprintf(stderr, "Finished sending");
+    close(connfd);
+}
+
+
+void SetNewData(){
+	
+	writeTo=recvBuf;
 	
 	//Line counter-------------------------------------------
 	int intBuflineCount = 150;
 	insertBytesFromInt(&intBuflineCount, &writeTo, 3);
 
 	//Latitude 
-	long longBuflatitude = (unsigned long)(29.172045 * 1000000);
+	//long longBuflatitude = (unsigned long)(29.210592 * 1000000); //East Ocean
+	//long longBuflatitude = (unsigned long)(28.528328 * 1000000); //Orlando
+	long longBuflatitude = (unsigned long)(30.327081 * 1000000); //Jacksonville
 	insertBytesFromInt(&longBuflatitude, &writeTo, 5);
 
 	//Longitude
-	long longBuflongitude = (unsigned long)(81.078736 * 1000000);
+	//long longBuflongitude = (unsigned long)(81.001407 * 1000000); //East Ocean
+	//long longBuflongitude = (unsigned long)(81.385902 * 1000000); //Orlando 
+	long longBuflongitude = (unsigned long)(81.641377 * 1000000); //Jacksonville
 	insertBytesFromInt(&longBuflongitude, &writeTo, 5);
 
 	//Altitude * 100--------------------------------------------
@@ -123,76 +175,87 @@ int main(int argc, char *argv[])
 	recvBuf[29] = 'E';
 	recvBuf[30] = 'N';
 	recvBuf[31] = 'D';
-	/////////////////////////////////////////////////////////REMOVE AFTER TEST////////////////////////////////////////////////////////////
-
-    while(1)
-    {
-        connfd = tryNewSocketConnection(startingSocketNum);
-		
-		//Data[0] = "1"; ////////////////////////////////////////////////////////////////used for counting lines
-		/*write(connfd, Data, 200);
-		
-		for(lineCount=2;lineCount<=50;lineCount++){
-				sprintf(fileCounter, "%d", lineCount+1);
-				//Data[0] = fileCounter;//////////////////////////////////////////////////used for counting lines
-				write(connfd, Data, 200);
-		}
-		
-		for(fileCount=1;fileCount<60;fileCount++){
-			for(lineCount=0;lineCount<50;lineCount++){
-				sprintf(fileCounter, "%d", lineCount);
-				//Data[0] = fileCounter;//////////////////////////////////////////////////used for counting lines
-				write(connfd, Data, 200);
-			}
-		}*/
-		
-		while (1){
-			//read(file, recvBuf, 22);
-			
-			printf("%d\n", write(connfd, recvBuf, 32));
-		
-			/*if(lineCounter%10 == 0){
-				char* writeArray=buf;
-				char** wrPtr=&writeArray;
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
-			
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
-		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,4));
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
-
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
-		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
-
-				printf("%c", (char)getIntFromByte(wrPtr,1));
-
-				printf("%c", (char)getIntFromByte(wrPtr,1));
-
-				printf("%c\n", (char)getIntFromByte(wrPtr,1));
-			}*/
-		
-			//printf("%s\n", buf);
-			//nanosleep(&req,&rem);
-			//lineCounter++;
-		}
-		close(file);
-		
-		fprintf(stderr, "Finished sending");
-        close(connfd);
-        sleep(1);
-    }
-	 
+	
+	// repeat data for the second 2 lines of the 96 byte (3 x 32) transmission
+	recvBuf[32] = recvBuf[0];
+	recvBuf[33] = recvBuf[1];
+	recvBuf[34] = recvBuf[2];
+	recvBuf[35] = recvBuf[3];
+	recvBuf[36] = recvBuf[4];
+	recvBuf[37] = recvBuf[5];
+	recvBuf[38] = recvBuf[6];
+	recvBuf[39] = recvBuf[7];
+	recvBuf[40] = recvBuf[8];
+	recvBuf[41] = recvBuf[9];
+	recvBuf[42] = recvBuf[10];
+	recvBuf[43] = recvBuf[11];
+	recvBuf[44] = recvBuf[12];
+	recvBuf[45] = recvBuf[13];
+	recvBuf[46] = recvBuf[14];
+	recvBuf[47] = recvBuf[15];
+	recvBuf[48] = recvBuf[16];
+	recvBuf[49] = recvBuf[17];
+	recvBuf[50] = recvBuf[18];
+	recvBuf[51] = recvBuf[19];
+	recvBuf[52] = recvBuf[20];
+	recvBuf[53] = recvBuf[21];
+	recvBuf[54] = recvBuf[22];
+	recvBuf[55] = recvBuf[23];
+	recvBuf[56] = recvBuf[24];
+	recvBuf[57] = recvBuf[25];
+	recvBuf[58] = recvBuf[26];
+	recvBuf[59] = recvBuf[27];
+	recvBuf[60] = recvBuf[28];
+	recvBuf[61] = recvBuf[29];
+	recvBuf[62] = recvBuf[30];
+	recvBuf[63] = recvBuf[31];
+	
+	recvBuf[64] = recvBuf[0];
+	recvBuf[65] = recvBuf[1];
+	recvBuf[66] = recvBuf[2];
+	recvBuf[67] = recvBuf[3];
+	recvBuf[68] = recvBuf[4];
+	recvBuf[69] = recvBuf[5];
+	recvBuf[70] = recvBuf[6];
+	recvBuf[71] = recvBuf[7];
+	recvBuf[72] = recvBuf[8];
+	recvBuf[73] = recvBuf[9];
+	recvBuf[74] = recvBuf[10];
+	recvBuf[75] = recvBuf[11];
+	recvBuf[76] = recvBuf[12];
+	recvBuf[77] = recvBuf[13];
+	recvBuf[78] = recvBuf[14];
+	recvBuf[79] = recvBuf[15];
+	recvBuf[80] = recvBuf[16];
+	recvBuf[81] = recvBuf[17];
+	recvBuf[82] = recvBuf[18];
+	recvBuf[83] = recvBuf[19];
+	recvBuf[84] = recvBuf[20];
+	recvBuf[85] = recvBuf[21];
+	recvBuf[86] = recvBuf[22];
+	recvBuf[87] = recvBuf[23];
+	recvBuf[88] = recvBuf[24];
+	recvBuf[89] = recvBuf[25];
+	recvBuf[90] = recvBuf[26];
+	recvBuf[91] = recvBuf[27];
+	recvBuf[92] = recvBuf[28];
+	recvBuf[93] = recvBuf[29];
+	recvBuf[94] = recvBuf[30];
+	recvBuf[95] = recvBuf[31];
 }
 
+
 //SERVER STUFF. setting up socket
-int tryNewSocketConnection(int socketNum){
+int tryNewSocketConnection(){
+	
+	if (madeConnection == 1){
+		startingSocketNum++;
+		madeConnection = 0;
+	}
 	
 	int listenfd = 0;
     struct sockaddr_in serv_addr;
 	int ServerFileNum;
-	
 	
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -201,14 +264,16 @@ int tryNewSocketConnection(int socketNum){
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_addr.sin_port = htons(startingSocketNum); 
 
-    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
-
-    listen(listenfd, 10);
-	
+    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+    listen(listenfd, 10)
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 	
-	return ServerFileNum;
+	SocketNumberFileData[1] += 1; //increments the socket number by 1 
+	write(SocketNumberFile, SocketNumberFileData, 2);
 	
+	madeConnection = 1;
+	
+	return ServerFileNum;
 }
 
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
