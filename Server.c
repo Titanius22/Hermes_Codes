@@ -23,14 +23,14 @@ int tryNewSocketConnection(int);
 
 // The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
 static const char *devName = "/dev/i2c-1";
-static const char *SocketNumFileName = "SocketNum.txt";
+static const char *SocketNumFileName = "SocketNumber.txt";
 
 //Globals
 char recvBuf[100];
-//unsigned short startingSocketNum
+unsigned short startingSocketNum;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
-FILE *SocketNumberFile;
-char SocketNumberFileData[5];
+FILE *SocketNumFile;
+char SocketNumFileData[5];
 
 	
 	
@@ -61,9 +61,10 @@ int main(int argc, char *argv[])
 	req.tv_nsec = 5000000; //5ms
 	
 	//look at SocketNum file to check what number to start with
-	SocketNumberFile = fopen(SocketNumFileName, "w+");
-	read(SocketNumberFile, SocketNumberFileData, 2);
-	startingSocketNum = SocketNumberFileData[0] << 8 | SocketNumberFileData[1];
+	SocketNumFile = fopen(SocketNumFileName, "r+");
+	fread(SocketNumFileData, 2, 1, SocketNumFile);
+	rewind(SocketNumFile); //puts pointer back to the top of the page
+	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 	
 	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////
 	SetNewData();
@@ -268,8 +269,8 @@ int tryNewSocketConnection(){
     listen(listenfd, 10)
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 	
-	SocketNumberFileData[1] += 1; //increments the socket number by 1 
-	write(SocketNumberFile, SocketNumberFileData, 2);
+	SocketNumFileData[1] += 1; //increments the socket number by 1 
+	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
 	
 	madeConnection = 1;
 	

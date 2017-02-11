@@ -17,21 +17,23 @@
 unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* , unsigned char** , short);
 int tryNewSocketConnection();
-short findOffset(char , short , short);
+short findOffset(char[] , short , short);
 
 //Globals
 int ServerFileNum;
 struct sockaddr_in serv_addr;
-//unsigned short startingSocketNum = 5000;
+unsigned short startingSocketNum; // = 5000;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
 short lineLength = 32;
-char SocketNumberFileData[5];
+char SocketNumFileData[5];
+FILE *SocketNumFile;
 
 // The slave Arduino address
 #define ADDRESS 0x04
 
 // The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
 static const char *devName = "/dev/i2c-1";
+static const char *SocketNumFileName = "SocketNumber.txt";
 
 int main(int argc, char *argv[])
 {
@@ -65,9 +67,10 @@ int main(int argc, char *argv[])
 	}
 	
 	//look at SocketNum file to check what number to start with
-	SocketNumberFile = fopen(SocketNumFileName, "w+");
-	read(SocketNumberFile, SocketNumberFileData, 2);
-	startingSocketNum = SocketNumberFileData[0] << 8 | SocketNumberFileData[1];
+	SocketNumFile = fopen(SocketNumFileName, "r+");
+	fread(SocketNumFileData, 2, 1, SocketNumFile);
+	rewind(SocketNumFile); //puts pointer back to the top of the page
+	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 
 	int fileCount = 1;
 	int fileLineCount = 1;
@@ -81,7 +84,7 @@ int main(int argc, char *argv[])
 	char* writeArray;
 	char** wrPtr;
 	char command[25];
-	int offset;
+	short offset;
 	
 	unsigned int DataLineCounter;
 	unsigned long DataGPS[3]; // Longitude, Latitude, Altitude
@@ -124,10 +127,12 @@ int main(int argc, char *argv[])
 				// Every 20 lines
 				if(fileLineCount == 2000){
 					
-					offset = findOffset(recvBuff, n, lineLength);
+					//offset = findOffset(recvBuff, n, lineLength);
 					
-					if(offset >= 0){
-						writeArray=recvBuff[offset];
+					//if(offset >= 0){
+					if(recvBuff[29] == 'E'){
+						//writeArray=recvBuff[offset];
+						writeArray=recvBuff;
 						wrPtr=&writeArray;
 						
 						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,3);
@@ -269,8 +274,8 @@ int tryNewSocketConnection(){
 		return -1;
 	}
 	
-	SocketNumberFileData[1] += 1; //increments the socket number by 1 
-	write(SocketNumberFile, SocketNumberFileData, 2);
+	SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
+	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
 	
 	madeConnection = 1;
 	
