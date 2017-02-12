@@ -16,7 +16,7 @@
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
-int tryNewSocketConnection();
+void tryNewSocketConnection();
 void SetNewData();
 
 // The slave Arduino address
@@ -32,12 +32,12 @@ unsigned short startingSocketNum;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
 FILE *SocketNumFile;
 char SocketNumFileData[5];
+int ServerFileNum = 0;
 
 
 int main(int argc, char *argv[])
 {
     struct timespec req={0},rem={0};
-	int connfd = 0;
 	short connectionError = 0;
 	
 	//I2C STUFF. setting up i2c for communication
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	//look at SocketNum file to check what number to start with
 	SocketNumFile = fopen(SocketNumFileName, "r");
 	fread(SocketNumFileData, 2, 1, SocketNumFile);
-	close(SocketNumFile);
+	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 	
 	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////
@@ -71,12 +71,12 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        connfd = tryNewSocketConnection();
+        tryNewSocketConnection();
 		
 		while (connectionError >= 0){
 			//read(file, recvBuf, 22);
 			
-			connectionError = write(connfd, recvBuf, 96);
+			connectionError = write(ServerFileNum, recvBuf, 96);
 			/*if(lineCounter%10 == 0){
 				char* writeArray=buf;
 				char** wrPtr=&writeArray;
@@ -110,13 +110,13 @@ int main(int argc, char *argv[])
 		
     }
 	fprintf(stderr, "Finished sending");
-    close(connfd);
+    close(ServerFileNum);
 }
 
 
 void SetNewData(){
 	
-	char* writeTo=recvBuf;
+	unsigned char* writeTo=recvBuf;
 	
 	//Line counter-------------------------------------------
 	int intBuflineCount = 150;
@@ -246,16 +246,17 @@ void SetNewData(){
 
 
 //SERVER STUFF. setting up socket
-int tryNewSocketConnection(){
+void tryNewSocketConnection(){
 	
+	//if connection was already made but then was broken and tryNewSocketConnection() was called again, this if statment will increment the socketnumber and reset the connecting flag (madeConnection) before continuing
 	if (madeConnection == 1){
+		close(ServerFileNum);
 		startingSocketNum++;
 		madeConnection = 0;
 	}
 	
 	int listenfd = 0;
     struct sockaddr_in serv_addr;
-	int ServerFileNum;
 	
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -268,15 +269,14 @@ int tryNewSocketConnection(){
     listen(listenfd, 10);
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 	
-	//Only makes it this far if none of the above errors have occured
+	//Only makes it this far if none of the above errors have occured.
+	//Connection was made therefor the SocketNumber file but be updated
 	SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
 	SocketNumFile = fopen(SocketNumFileName, "w");
 	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
-	close(SocketNumFile);
+	fclose(SocketNumFile);
 	
 	madeConnection = 1;
-	
-	return ServerFileNum;
 }
 
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){

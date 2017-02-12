@@ -23,7 +23,8 @@ short findOffset(char[] , short , short);
 int ServerFileNum;
 struct sockaddr_in serv_addr;
 unsigned short startingSocketNum; // = 5000;
-short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
+short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port 
+number is incremented and madeConnection is set to false till another connection is found.
 short lineLength = 32;
 char SocketNumFileData[5];
 FILE *SocketNumFile;
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
 	//look at SocketNum file to check what number to start with
 	SocketNumFile = fopen(SocketNumFileName, "r");
 	fread(SocketNumFileData, 2, 1, SocketNumFile);
-	close(SocketNumFile);
+	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 
 	int fileCount = 1;
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
 	//char leftOvers[25];
 	char* writeArray;
 	char** wrPtr;
-	char command[25];
+	char command[30];
 	short offset;
 	
 	unsigned int DataLineCounter;
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
 			{
 				
 				// At the start of every new "page", it creates and opens a new file
-				if (fileLineCount == 1){
+				if (filePointer == NULL){
 					sprintf(fileCounter, "%04d", fileCount);
 				
 					strcpy(fullFilePath, filepath);
@@ -189,11 +190,15 @@ int main(int argc, char *argv[])
 					fileLineCount = 0;
 					fileCount++;
 					fclose(filePointer);
+					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 				}
 				fileLineCount++;
-				//packetCount++;
 			}
-			fclose(filePointer);
+			if(filePointer!=NULL){
+				fclose(filePointer);
+				filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+			}
+
 		}
 		
 		//delay
@@ -226,7 +231,8 @@ short findOffset(char recvArray[], short lengthOfArray, short lengthOfLine){
 	i = lengthOfLine - 3; // -1 puts it at the end of the potential Dataline, -3 puts is at the potential 'E'
 	
 	// This will keep looping through the array till it finds an 'E' followed by an 'N' and a 'D' or is hits the end and will return a -1
-	while(i < lengthOfArray-2){ // its lengthOfArray-2 because 'E', 'N', and 'D' must match. If it reaches lengthOfArray-2, there couldn't be 'E', 'N', and 'D'.
+	while(i < lengthOfArray-2){ // its lengthOfArray-2 because 'E', 'N', and 'D' must match. If it reaches lengthOfArray-2, there couldn't be 'E', 
+'N', and 'D'.
 		if(recvArray[i] == 'E'){
 			if (recvArray[i+1] == 'N' && recvArray[i+2] == 'D'){
 				result = i - (lengthOfLine-2) + 1; //the element in the recvArray that starts the propper data line
@@ -241,7 +247,10 @@ short findOffset(char recvArray[], short lengthOfArray, short lengthOfLine){
 //SERVER STUFF. setting up socket
 int tryNewSocketConnection(){
 	
+	//if connection was already made but then was broken and tryNewSocketConnection() was called again, this if statment will increment the 
+socketnumber and reset the connecting flag (madeConnection) before continuing
 	if (madeConnection == 1){
+		close(ServerFileNum);
 		startingSocketNum++;
 		madeConnection = 0;
 	}
@@ -274,21 +283,22 @@ int tryNewSocketConnection(){
 		return -1;
 	}
 	
-	//Only makes it this far if none of the above errors have occured
+	//Only makes it this far if none of the above errors have occured.
+	//Connection was made therefor the SocketNumber file but be updated
 	SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
 	SocketNumFile = fopen(SocketNumFileName, "w");
 	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
-	close(SocketNumFile);
+	fclose(SocketNumFile);
 	
 	madeConnection = 1;
 	
 	return 0;
 }
 		
-unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
+unsigned long getIntFromByte(char** arrayStart, short bytes){
 
   //Allocating array to read into
-  unsigned char* intPtr = malloc (sizeof(unsigned long));
+  char* intPtr = malloc (sizeof(unsigned long));
   unsigned long temp;
   //Void pointer to same location to return
 
