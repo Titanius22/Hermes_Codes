@@ -1,749 +1,219 @@
-/*
-
-"~" in a commnet = ISSUE THAT NEEDS TO BE LOOKED AT
-
-
- 
- SimpleSat Rotor Control Program  -  73 de W9KE Tom Doyle
- January 2012
- 
- Written for Arduino 1.0
- 
- This program was written for the Arduino boards. It has been tested on the
- Arduino UNO and Mega2560 boards. 
- 
- Pin 7 on the Arduino is used as a serial tx line. It is connected to a Parallax 
- 27977 2 X 16 backlit serial LCD display - 9600 baud. WWW.Parallax.com
- It is not required but highly recommended. You might want to order a
- 805-00011 10-inch Extension Cable with 3-pin Header at the same time.
- The first row on the display will display the current rotor azimuth on
- the left hand side of the line. When the azimuth rotor is in motion 
- a L(eft) or R(ight) along with the new azimuth received from the tracking 
- program is displayed on the right side of the line. The second line will do
- the same thing for the elevation with a U(p) or D(own) indicating the 
- direction of motion.
- 
- The Arduino usb port is set to 9600 baud and is used for receiving
- data from the tracking program in GS232 format.
- In SatPC32 set the rotor interface to Yaesu_GS-232.
- 
- These pin assignments can be changed
- by changting the assignment statements below.
- G-5500 analog azimuth to Arduino pin A0
- G-5500 analog elevation to Arduino pin A1
- Use a small signal transistor switch or small reed relay for these connections
- G-5500 elevation rotor up to Arduino pin 8
- G-5500 elevation rotor down to Arduino pin 9
- G-5500 azimuth rotor left to Arduino pin 10
- G-5500 azimuth rotor right to Arduino pin 11
- 
- The Arduino resets when a connection is established between the computer
- and the rotor controller. This is a characteristic of the board. It makes
- programming the chip easier. It is not a problem but is something you
- should be aware of.
- 
- The program is set up for use with a Yaesu G-5500 rotor which has a max
- azimuth of 450 degrees and a max elevation of 180 degrees. The controller
- will accept headings within this range. If you wish to limit the rotation
- to 360 and/or limit the elevation to 90 set up SatPC32 to limit the rotation
- in the rotor setup menu. You should not have to change the rotor controller.
- 
-            - For additional information check -
- 
-      http://www.tomdoyle.org/SimpleSatRotorController/ 
-*/
-
 /* 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
-    INCLUDING BUT NOT LIMITED TO THE'WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-    PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 'COPYRIGHT HOLDERS BE 
-    LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-    OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-    DEALINGS IN THE SOFTWARE.
-*/ 
-
-/*
-
-COMMANDS:
-
-COMMAND: 1 latitude longitude elevation
-RETURN: (printed successful)
-Sets the ground station's GPS location. It is usually only called once before tracking begins but has no limitation on number of calls. It is used in determining the pointing direction of the antenna during tracking. This command call has the integer command number and 3 double arguments. The arguments of latitude and longitude are in decimal degrees and elevation is in meters. Returns 1 if sucessful, -1 if not.
-
-COMMAND: 2 latitude longitude elevation
-RETURN: (printed successful)
-Sets the tracking object's GPS location. This command it called with a high frequency but no more than 1 Hz. This command call has the integer command number and 3 double arguments. The arguments of latitude and longitude are in decimal degrees and elevation is in meters. Returns 1 if sucessful, -1 if not.
-
-COMMAND: 3
-RETURN: (printed azimuth elevation)
-This command tells the tracking system to return the rotor's current azimuth and elevation. The values are then sent as a string of azimuth and elevation angles seperated by a space. The angles are in integer degrees.
+Demonstration code for the Parallax PAM-7Q module, #28509
+This code uses the default factory settings of the PAM-7Q module.
+The GPS output is displayed in the Arduino Serial Terminal Window.
+After uploading the sketch open this window to view the output. 
+Make sure the baud rate is set to 9600.
+Numeric output is shown as signed latitude and longitude degrees and
+minutes. Values may be directly copied and pasted into the location bar
+of Google Maps to visually show your location.
+For best results use the PAM-7Q module outdoors, or near an open window.
+Use indoors away from windows may result in inconsistent results.
+This example code is for the Arduino Uno and direct compatible boards. 
+It has not been tested, nor designed for, other Arduino boards, including
+the Arduino Due.
+Important: This version is intended for Arduino 1.0 or later IDE. It will
+not compile in earlier versions. Be sure the following files are
+present in the folder with this sketch:
+TinyGPS.h
+TinyGPS.cpp
+keywords.txt
+A revised version of the TinyGPS object library is included in the sketch folder
+to avoid conflict with any earlier version you may have in the Arduino libraries 
+location.
+Connections:
+PAM-7Q    Arduino
+GND       GND
+VDD       5V
+TXD       Digital Pin 6
+ 
+Reminder! Wait for the satellite lock LED to begin flashing before
+taking readings. The flashing LED indicates satellite lock. Readings taken
+before satellite lock may be inaccurate.
 */
 
-// ------------------------------------------------------------
-// ---------- you may wish to adjust these values -------------
-// ------------------------------------------------------------
+// for GPS
+#include <SoftwareSerial.h>
+#include "./TinyGPS.h"                  // Use local version of this library
+TinyGPS gps;
+// for Sensor
+#include <Wire.h>
+#define ADDRESS 0x76 //0x77
 
-// A/D converter parameters 
-/*
-   AFTER you have adjusted your G-5500 control box as per the manual
-   adjust the next 4 parameters. The settings interact a bit so you may have
-   to go back and forth a few times. Remember the G-5500 rotors are not all that
-   accurate (within 4 degrees at best) so try not to get too compulsive when 
-   making these adjustments. 
-*/
+// for GPS------------------------------------------------------------------------------------------
+unsigned long age;
+float balloonLat              = 34.28889;//[degrees]
+float balloonLon              = 91.6458;//[degrees]
+float balloonAlt              = 10064.0;///5280.0;//[miles]
+//const byte rxPin = 0;
+//const byte txPin = 1;
 
+// for Sensor------------------------------------------------------------------------------------------
+uint32_t D1 = 0;
+uint32_t D2 = 0;
+int64_t dT = 0;
+int32_t TEMP = 0;
+int64_t OFF = 0; 
+int64_t SENS = 0; 
+int32_t P = 0;
+uint16_t C[7];
+unsigned int Temperature_cC; //RealTemp +60C (to remove negative) then *10^2 to get temp in centiCelsius. 
+unsigned long Pressure_dP; //in decaPascels *10^2;
 
+//For sending
+unsigned long lineCount = 0;
+char endLine[3] = {'E', 'N', 'D'};
+//char CharsToSend[24];
+//char* CharsToSend = malloc(24);
+char* CharsToSend = malloc(22);
+char* writeTo=CharsToSend;
 
-#if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
-
-#include "Wire.h"
-#include <SoftwareSerial.h> // use software uart library
-
-#define SLAVE_ADDRESS 0x04
-int i;
-
-const long _azAdZeroOffset   =   0;//325;//-3;   // adjust to zero out lcd az reading when control box az = 0 
-const long _elAdZeroOffset   =   0;//7;   // adjust to zero out lcd el reading when control box el = 0
-
-/*  
-    10 bit A/D converters in the Arduino have a max value of 1023
-    for the azimuth the A/D value of 1023 should correspond to 450 degrees
-    for the elevation the A/D value of 1023 should correspond to 180 degrees
-    integer math is used so the scale value is multiplied by 100 to maintain accuracy
-    the scale factor should be 100 * (1023 / 450) for the azimuth
-    the scale factor should be 100 * (1023 / 180) for the elevation    
-*/
-
-const long _azScaleFactor =  232;  //  adjust as needed
-const long _elScaleFactor =  568;  //  adjust as needed 
-/////
-const long _dispazScaleFactor =  500;  //  adjust as needed
-const long _dispelScaleFactor =  500;  //  adjust as needed 
-
-// pins
-const byte _elevationInputPin = A0; // elevation analog signal from G5500
-const byte _azimuthInputPin = A1;   // azimuth analog signal from G5500
-const byte _G5500UpPin = 9;        // elevation rotor up control line
-const byte _G5500DownPin = 10;      // elevation rotor down control line
-const byte _G5500LeftPin = 11;      // azimuth rotor left control line
-const byte _G5500RightPin = 12;     // azimuth rotor right control line
-
-// take care if you lower this value -  wear or dirt on the pots in your rotors
-// or A/D converter jitter may cause hunting if the value is too low. 
-
-long _closeEnough = 500;   // tolerance for az-el match in rotor move in degrees * 100
-long _closeEnoughSmoothing = 1000;   // if within this range (degree * 100), increase pausing between moves to limit current surges
-
-//Values for calculations
-const float Re = 3956.0; //[miles]
-const float pi = 3.14159265359; 
-float distancefromballoontoGS = 0;   
-                                //ICI//COA//KENNEL CLUB//TEST
-float balloonLat              = 29.191585;//29.187366;//29.166656;//34.28889;//[degrees]
-float balloonLon              = 81.046269;//81.049893;//81.080002;//117.6458;//[degrees]
-float balloonAlt              = 0;//10064.0/5280.0;//[miles]
-//Hard coded for ERAU Daytona Beach Campus;//Test values
-float groundStationlat        = 29.188330;//34.22389;//[degrees]
-float groundStationlon        = 81.048108;//118.0603;//[degrees]
-float groundStationAlt        = 0;//5710.0/5280.0;//[miles]
-float d; 
-float Azimuth; 
-float Elevation; 
-String command = "";
-
-//                        1 latitude longitude elevation
-String RecievedCommand = "2 29 81 22";
-
-char* CharsToReceive = malloc(22);
-//char* writeArray=CharsToReceive;
-//char** wrPtr=&writeArray;
-
-// ------------------------------------------------------------
-// ------ values from here down should not need adjusting -----
-// ------------------------------------------------------------
-
-// rotor
-const long _maxRotorAzimuth = 45000L;  // maximum rotor azimuth in degrees * 100
-const long _maxRotorElevation = 18000L; // maximum rotor elevation in degrees * 100
-
-long _rotorAzimuth = 0L;       // current rotor azimuth in degrees * 100
-long _rotorElevation = 0L;     // current rotor azimuth in degrees * 100
-long _azimuthTemp = 0L;        // used for gs232 azimuth decoding
-long _elevationTemp = 0L;      // used for gs232 elevation decoding  
-long _newAzimuth = 0L;         // new azimuth for rotor move
-long _newElevation = 0L;       // new elevation for rotor move
-long _previousRotorAzimuth = 0L;       // previous rotor azimuth in degrees * 100
-long _previousRotorElevation = 0L;     // previous rotor azimuth in degrees * 100
-
-unsigned long _rtcLastDisplayUpdate = 0UL;      // rtc at start of last loop
-unsigned long _rtcLastRotorUpdate = 0UL;        // rtc at start of last loop
-unsigned long _displayUpdateInterval = 500UL;   // display update interval in mS
-unsigned long _rotorMoveUpdateInterval = 100UL; // rotor move check interval in mS
-
-boolean _gs232WActice = false;  // gs232 W command in process
-boolean _AZjustmoved = false;  // gs232 W command in process
-boolean _ELjustmoved = false;  // gs232 W command in process
-int _gs232AzElIndex = 0;        // position in gs232 Az El sequence
-long _gs232Azimuth = 0;          // gs232 Azimuth value
-long _gs232Elevation = 0;        // gs232 Elevation value
-boolean _azimuthMove = false;     // azimuth move needed
-boolean _elevationMove = false;   // elevation move needed
-
-String azRotorMovement;   // string for az rotor move display
-String elRotorMovement;   // string for el rotor move display
-
-
-// ------------------------------------------------------------
-// ------ Variables for the code to run -----
-// ------------------------------------------------------------
-
-boolean recievedNewI2Cdata = false;
-String RecievedData;
-char ch;
-int valueindex;
-String temp = "";
-
-int j;
-
-//
-// run once at reset
-//
-void setup()
-{
-    // initialize rotor control pins as outputs
-    pinMode(_G5500UpPin, OUTPUT);
-    pinMode(_G5500DownPin, OUTPUT);
-    pinMode(_G5500LeftPin, OUTPUT);
-    pinMode(_G5500RightPin, OUTPUT);
-    // set all the rotor control outputs low
-    digitalWrite(_G5500UpPin, LOW);
-    digitalWrite(_G5500DownPin, LOW);
-    digitalWrite(_G5500LeftPin, LOW);
-    digitalWrite(_G5500RightPin, LOW);
-    // initialize serial ports:
-    Serial.begin(9600);  // for computer printing
-
-    readAzimuth(); // get current azimuth from G-5500
-    _previousRotorAzimuth = _rotorAzimuth + 1000;
-    readElevation(); // get current elevation from G-5500
-    _previousRotorElevation = _rotorElevation + 1000; 
-    delay(1000);
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-    //Serial.print("Initial GS AZ: ");
-    //Serial.println(_rotorAzimuth/100);
-    //Serial.print("Initial GS EL: ");
-    //Serial.println(_rotorElevation/100); 
-    //Serial.println("");
-
-    //I2C
-    pinMode(13, OUTPUT);
-    // initialize i2c as slave
-    Wire.begin(SLAVE_ADDRESS);
-    // define callbacks for i2c communication
-    Wire.onReceive(receiveData);
-    //Wire.onRequest(sendData);
-}
-
-
-//
-// //*************************************************************************///Start main program loop//*****************************************************************************//
-//
-void loop() 
-{
-  //delay(500);
-  //////////////////////////////////////////////////////////////////////////////////////////////////////
-  //Serial.println("");
-    //if (Serial.available() > 0){
-      String temp=Serial.readString();
-      
-      //receiveData(RecievedCommand);//NEEDS TO BE DELETED FOR FINAL CODE
-      Serial.println("Arduino Working");
-      command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
-      
-      /////////////////////////////////////////
-      //command = "W090 090";               ///
-      /////////////////////////////////////////
-      //////////////////////////////////////////////////////////////////////////////////////////////////////
-      //Serial.println("Command Sent: " + command);
-      for (i=0; i<=command.length(); i++){
-        decodeGS232(command.charAt(i));
-        //Serial.print(command.charAt(i));
-      }
-      //Serial.println(""); 
-    //}
-    unsigned long rtcCurrent = millis(); // get current rtc value
-   
-    // check for rtc overflow - skip this cycle if overflow
-    if (rtcCurrent > _rtcLastDisplayUpdate){ // overflow if not true    _rotorMoveUpdateInterval
-      // update rotor movement if necessary
-      //Serial.println("got in2");
-      if (rtcCurrent - _rtcLastRotorUpdate > _rotorMoveUpdateInterval){
-         _rtcLastRotorUpdate = rtcCurrent; // reset rotor move timer base
-         //Serial.println("got in3");
-         // AZIMUTH       
-         readAzimuth(); // get current azimuth from G-5500
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-         Serial.print("Commanded Azimuth: ");
-         Serial.println(_newAzimuth/100);
-         Serial.print("Azimuth Read: ");
-         Serial.println(_rotorAzimuth/100);
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-         Serial.print("Commanded Elevation: ");
-         Serial.println(_newElevation/100);
-         Serial.print("Elevation Read: ");
-         Serial.println(_rotorElevation/100);
-
-         //Serial.print("EL raw Read: ");
-         //Serial.println(analogRead(_elevationInputPin));
-         //Serial.print("AZ raw Read: ");
-         //Serial.println(analogRead(_azimuthInputPin));
-
-         Serial.print("EL Voltage Read: ");
-         Serial.println((float)analogRead(_elevationInputPin)*5/1024);
-         
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-         Serial.print("AZ Voltage Read: ");
-         */
-         Serial.println((float)analogRead(_azimuthInputPin)*5/1024);
-
-         if (recievedNewI2Cdata){
-
-            //unsigned long FirstNum, el; 
-            //unsigned long long lat, lon; 
-            
-            
-            
-            while(Wire.available()) {
-              ch = Wire.read();
-              RecievedData += ch;
-              //dataChArray[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-              //Serial.println(dataChArray[i]);
-              //data[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-              //dataChArray =+ Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-              //Serial.println(data[i]);
-              i++;
-            }
-            
-            Serial.print(RecievedData);
-            Serial.println("||||||||||||||||");
-            //Serial.println(RecievedData);
-            
-            //RecievedData += ' '; // adds a space to the end of the last number to have it recognized in the for loop
-            //RecievedData = String(FirstNum + ' ' + lat + ' ' + lon + ' ' + el + ' ');
-            //Serial.println(RecievedData);
-            valueindex = 1;
-            for (j=2; j<=RecievedData.length(); j++){                                   // GOES THROUGH EVERY CHAR IN THE DATA
-              if(RecievedData.charAt(0)=='1'){/////////////////////for GS values
-                if(RecievedData.charAt(j)==' '){                                        //IF IT HITS A SPACE 
-                  if(valueindex==1){groundStationlat = (temp.toFloat());}       //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==2){groundStationlon = (temp.toFloat());}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==3){groundStationAlt = (temp.toFloat()); break;}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TEMPARRAY VALUE 
-                  valueindex = valueindex + 1;
-                }else{
-                  temp = temp + RecievedData.charAt(j);
-                }                                // MODIFIES THE TEMPARARY VALUE
-              }else if(RecievedData.charAt(0)=='2') {//////////////for balloon values
-                if(RecievedData.charAt(j)==' '){                                        //IF IT HITS A SPACE
-                  if(valueindex==1){balloonLat = (temp.toFloat());}             //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==2){balloonLon = (temp.toFloat());}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==3){balloonAlt = (temp.toFloat()); break;}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TMPARRAY VALUE 
-                  valueindex = valueindex + 1;
-                }
-                temp = temp + RecievedData.charAt(j);                                   // MODIFIES THE TEMPARARY VALUE
-              }else if(RecievedData.charAt(0)=='3') {/////////////////////for balloon values
-                j = 1; //This is so the remove function below knows where to stop deleting. Commands 1 and 2 stop at the space after the last number, by making j = 1, it is doing the same thing. 
-
-				
-				
-				//sendData(RecievedData);
-				
-				
-				
-              }
-            }
-            //balloonLat = balloonLat/100000;
-            //balloonLon = balloonLon/100000;
-            //balloonAlt = balloonAlt/100;
-            Serial.print("balloonLat: ");
-            Serial.println(balloonLat);
-            Serial.print("balloonLon: ");
-            Serial.println(balloonLon);
-            Serial.print("balloonAlt: ");
-            Serial.println(balloonAlt);
-
-
-			RecievedData.remove(0, j+1); // removes old data
-			if(RecievedData.length() == 0){
-				
-				recievedNewI2Cdata = false;
-				
-			}
-			// else more commands need to be read from the wire buffer so recievedNewI2Cdata will remain true till all is read
-            
-
-
-          
-         }
-         
-         if ( (abs(_rotorAzimuth - _newAzimuth) > _closeEnough) && _azimuthMove ) { // see if azimuth move is required
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-            //Serial.println("-SHOULD MOVE-");
-            
-            updateAzimuthMove();
-
-            //ERIKS STUFFS
-            /*if (abs(_rotorAzimuth - _newAzimuth) < _closeEnoughSmoothing){
-              
-              delay(500); //Slows mount to limit current surges from changing the voltage
-              digitalWrite(_G5500LeftPin, LOW);
-              digitalWrite(_G5500RightPin, LOW);
-            
-            }*/
-            
-            readAzimuth();
-            //Serial.print("Ground Station AZ: ");
-            //Serial.println(_rotorAzimuth/100);
-            _AZjustmoved = true;
-         }
-        else{  // no move required - turn off azimuth rotor
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-           //Serial.println("-SHOULD NOT MOVE-");
-           digitalWrite(_G5500LeftPin, LOW);
-           digitalWrite(_G5500RightPin, LOW);
-           _azimuthMove = false;
-           azRotorMovement = "        ";
-           if (_AZjustmoved == true){
-              //delay(1000);
-              //Serial.println("");
-              //Serial.print("Initial Command Given: ");
-              //Serial.println(command);
-              //Serial.print("Final Ground Station AZ: ");
-              //Serial.println(_rotorAzimuth/100);
-              _AZjustmoved = false;
-           }
-         }
-         
-         // ELEVATION       
-         readElevation(); // get current elevation from G-5500
-         // see if aelevation move is required
-         if ( abs(_rotorElevation - _newElevation) > _closeEnough && _elevationMove ){ // move required{
-
-            updateElevationMove();
-
-            //ERIKS STUFFS
-            /*if (abs(_rotorElevation - _newElevation) < _closeEnoughSmoothing){
-              
-              delay(500); //Slows mount to limit current surges from changing the voltage
-              digitalWrite(_G5500UpPin, LOW);
-              digitalWrite(_G5500DownPin, LOW);
-            
-            } */
-            
-            readElevation();
-            //Serial.print("Ground Station EL: ");
-            //Serial.println(_rotorElevation/100); 
-            //Serial.println(""); 
-         }
-        else{  // no move required - turn off elevation rotor
-            digitalWrite(_G5500UpPin, LOW);
-            digitalWrite(_G5500DownPin, LOW);
-            _elevationMove = false;
-            elRotorMovement = "        ";
-            
-            if (_ELjustmoved == true){
-              //delay(1000);
-              //Serial.println("");
-              //Serial.print("Initial Command Given: ");
-              //Serial.println(command);
-              //Serial.print("Final Ground Station EL: ");
-              //Serial.println(_rotorElevation/100);
-              _ELjustmoved = false;
-           }
-         }            
-      } // end of update rotor move
-   }
-}
-
-//*************************************************************************///End main program loop//*****************************************************************************//
-
-
-//MAIN LOOP
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//FUNCTIONS
-
-
-// callback for received data
-void receiveData(){ // should not accept any values
+void setup() {
+  // for communication with Pi
+  Wire.begin(4);
   
-  recievedNewI2Cdata = true;
   
-  Serial.println("Recieved Stuff");
-}
-
-
-// callback for sending data
-//void sendData(String data){
-// data = String(_rotorAzimuth/100) + " " + String(_rotorElevation/100);
-// Wire.write(data);
-//}
-
-
-// update elevation rotor move
-//
-void updateElevationMove()
-{          
-   // calculate rotor move 
-   long rotorMoveEl = _newElevation - _rotorElevation;
-   if (rotorMoveEl > 0){
-      elRotorMovement = "  U ";
-      elRotorMovement = elRotorMovement + String(_newElevation / 100);
-      digitalWrite(_G5500DownPin, LOW);
-      digitalWrite(_G5500UpPin, HIGH);      
-   }
-   else{           
-     if (rotorMoveEl < 0){
-       elRotorMovement = "  D ";
-       elRotorMovement = elRotorMovement + String(_newElevation / 100);
-       digitalWrite(_G5500UpPin, LOW);
-       digitalWrite(_G5500DownPin, HIGH);       
-     } 
-   } 
- }
-
-
-//
-// update azimuth rotor move
-//
-void updateAzimuthMove()
-{          
-     // calculate rotor move 
-     long rotorMoveAz = _newAzimuth - _rotorAzimuth;
-     // adjust move if necessary
-     if (rotorMoveAz > 18000){ 
-        rotorMoveAz = rotorMoveAz - 18000; // adjust move if > 180 degrees
-     }
-     else{           
-       if (rotorMoveAz < -18000){ 
-         //rotorMoveAz = rotorMoveAz + 18000; // adjust move if < -180 degrees
-         rotorMoveAz = rotorMoveAz + 18000;
-       }
-     }
-     
-     if (rotorMoveAz > 0){
-        azRotorMovement = "  R ";
-        azRotorMovement = azRotorMovement + String(_newAzimuth / 100);
-        digitalWrite(_G5500LeftPin, LOW);
-        digitalWrite(_G5500RightPin, HIGH);        
-     }
-     else{           
-       if (rotorMoveAz < 0){
-         azRotorMovement = "  L ";
-         azRotorMovement = azRotorMovement + String(_newAzimuth / 100);
-         digitalWrite(_G5500RightPin, LOW); 
-         digitalWrite(_G5500LeftPin, HIGH);         
-      } 
-   }            
-}
-
-
-//
-// read azimuth from G5500
-//
-void readElevation()
-{
-   long sensorValue = analogRead(_elevationInputPin);
-   _rotorElevation = ((sensorValue * 10000) / _elScaleFactor) - _elAdZeroOffset;
-}
-
-
-//
-// read azimuth from G5500
-//
-void readAzimuth()
-{
-  long sensorValue = analogRead(_azimuthInputPin);
-  _rotorAzimuth = ((sensorValue * 10000) / _azScaleFactor) - _azAdZeroOffset;
-}
-
-
-//
-// decode gs232 commands
-//
-void decodeGS232(char character)
-{
-
-    switch (character){
-       case 'w':  // gs232 W command
-       case 'W':
-       {
-          {
-            _gs232WActice = true;
-            _gs232AzElIndex = 0;
-          }
-          break;
-       }
-       
-       // numeric - azimuth and elevation digits
-       case '0':  case '1':   case '2':  case '3':  case '4': 
-       case '5':  case '6':   case '7':  case '8':  case '9':
-       {
-          if ( _gs232WActice){
-            processAzElNumeric(character);          
-          }
-       }   
-       
-       default:{
-          // ignore everything else
-       }
-     }
-}
-
-
-//
-// process az el numeric characters from gs232 W command
-//
-void processAzElNumeric(char character)
-{
+  //for GPS------------------------------------------------------------------------------------------
+  Serial.begin(74880);
+  Serial1.begin(9600);                     // Communicate at 9600 baud (default for PAM-7Q module)
   
-      switch(_gs232AzElIndex){
-         case 0:{ // first azimuth character
-            _azimuthTemp =(character - 48) * 100;
-            _gs232AzElIndex++;
-            break;
-        } 
-        case 1:{
-            _azimuthTemp = _azimuthTemp + (character - 48) * 10;
-            _gs232AzElIndex++;
-            break;
-        } 
-        case 2:{ // final azimuth character
-            _azimuthTemp = _azimuthTemp + (character - 48);
-            _gs232AzElIndex++;
-            
-            // check for valid azimuth 
-            if ((_azimuthTemp * 100) > _maxRotorAzimuth){
-              _gs232WActice = false;
-              _newAzimuth = 0L;
-              _newElevation = 0L;
-            }           
-            break;
-        }  
-        case 3:{ // first elevation character
-            _elevationTemp =(character - 48) * 100;
-            _gs232AzElIndex++;
-            break;
-        } 
-        case 4:{
-            _elevationTemp = _elevationTemp + (character - 48) * 10;
-            _gs232AzElIndex++;
-            break;
-        } 
-        case 5:{ // last elevation character
-            _elevationTemp = _elevationTemp + (character - 48);
-            _gs232AzElIndex++;
-            
-            // check for valid elevation 
-            if ((_elevationTemp * 100) > _maxRotorElevation){
-              _gs232WActice = false;
-              _newAzimuth = 0L;
-              _newElevation = 0L;
-              
-            }
-            else{ // both azimuth and elevation are ok
-              // set up for rotor move
-              _newAzimuth = _azimuthTemp * 100;
-              _newElevation = _elevationTemp * 100;
-              _azimuthMove = true;
-              _elevationMove = true;
-            }            
-            break;
-        }             
-        
-        default:{
-           // should never get here
-        }         
-    } 
+  delay(200);
+  
+  // for Sensor------------------------------------------------------------------------------------------
+  // Disable internal pullups, 10Kohms are on the breakout
+  PORTC |= (1 << 4);
+  PORTC |= (1 << 5);
+  delay(100);
+  
+  initial(ADDRESS);
+  //GPSstuff(); 
+  //SENSORstuff();
+  //updateCharsToSend();
+  
+  Wire.onRequest(requestEvent); // register event
+}
+
+void loop() {
+  //delay(1000);
+  GPSstuff();
+  SENSORstuff();
+  //updateCharsToSend();
+  
+  char* writeArray=CharsToSend;
+  char** wrPtr=&writeArray;
+//  for (short i=0; i<22; i++ ){
+//    Serial.print(i);
+//    Serial.print(": ");
+//    Serial.println(CharsToSend[i], 16);
+//  }
+//  Serial.print('\n');
+  
+  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+//  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
+//
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//
+//  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
+//  
+//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
+//
+//  Serial.println((char)getIntFromByte(wrPtr,1));
+  
+  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
+  //lineCount++; // increments in updateCharsToSend
+  
+  delay(100);
 }
 
 
-// calculates distance along the surface of the Earth between the points at sea level below each of the points
-float findDistance(float balloonLon, float balloonLat, float groundStationlon, float groundStationlat) {
-  float dlon, dlat, a, c, d;  // ground station = 1  // balloon = 2
-  dlon = balloonLon - groundStationlon;
-  dlat = balloonLat - groundStationlat;
-  a = pow((sin(dlat/2)),2) + cos(groundStationlat) * cos(balloonLat) * pow((sin(dlon/2)),2);
-  c = 2 * asin(min(1,sqrt(a)));
-  d = Re * c;
-  return d;
+// function that executes whenever data is requested by master
+// this function is registered as an event, see setup()
+void requestEvent() {
+  //GPSstuff();
+  //SENSORstuff();
+  //char* CharsToSend = updateCharsToSend();
+  //updateCharsToSend();
+  lineCount++;
+  updateCharsToSend();
+  Wire.write(CharsToSend, 22); // respond with message of 24 byte
+  //updateCharsToSend();
+  //free(CharsToSend);
+  //Wire.write("ftgyho04856000r57j0k?0");
+  
+  //GPSstuff();
+  //SENSORstuff();
+  
+  
 }
-// calculates Azimuth from ground station to balloon
-float findAzimuth(float balloonLon, float balloonLat, float groundStationlon, float groundStationlat, float d) {
-  float x;  // ground station = 1  // balloon = 2
-  x = acos( (sin(balloonLat) - sin(groundStationlat)*cos(d/Re)) / (sin(d/Re)*cos(groundStationlat)) );
-  if(sin(balloonLon-groundStationlon) > 0){
-    x = (2*pi)-x;
+
+//char* updateCharsToSend(){
+void updateCharsToSend(){
+  free(CharsToSend);
+  char* CharsToSend = malloc(22);
+  char* writeTo=CharsToSend;
+  unsigned long intBuflineCount;
+  unsigned long longBuflatitude;
+  unsigned long longBuflongitude;
+  unsigned long intBufaltitude;
+  unsigned int intBuftemperature;
+  unsigned long intBufpressure;
+
+  //Line counter-------------------------------------------
+  intBuflineCount = lineCount;
+  insertBytesFromInt(&intBuflineCount, &writeTo, 3);
+
+  //Latitude * 10^5 positive only----------------should be 10^10-----------
+  longBuflatitude = (unsigned long)(balloonLat * 100000);
+  insertBytesFromInt(&longBuflatitude, &writeTo, 4);
+
+  //Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
+  longBuflongitude = (unsigned long)(balloonLon * 100000);
+  insertBytesFromInt(&longBuflongitude, &writeTo, 4);
+
+  //Altitude * 100--------------------------------------------
+  intBufaltitude = balloonAlt * 100;
+  insertBytesFromInt(&intBufaltitude, &writeTo, 3);
+
+  //Temperature count------------------------------------------
+  intBuftemperature = Temperature_cC;
+  insertBytesFromInt(&intBuftemperature, &writeTo, 2);
+
+  //Pressure count---------------------------------------------
+  intBufpressure = Pressure_dP;
+  insertBytesFromInt(&intBufpressure, &writeTo, 3);
+
+  //End of line chars-------------------------------------------
+
+  CharsToSend[19] = endLine[0];
+  CharsToSend[20] = endLine[1];
+  CharsToSend[21] = endLine[2];
+
+  //lineCount++;
+}
+
+
+void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytesToCopy){
+
+  unsigned char* valueBytes=value;
+  short loopCount=0;
+  for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
+    (*byteStart)[loopCount]=valueBytes[loopCount];
   }
-  return x;
+  *byteStart+=(short)numberBytesToCopy;
 }
-// calculates Elevation from ground station to balloon
-float findElevation(float balloonAlt, float groundStationAlt, float d) {
-  float el;  // ground station = 1  // balloon = 2
-  //el = asin(((balloonAlt - groundStationAlt)/d) - (d/(2.0*Re)));
-  el = atan(((balloonAlt - groundStationAlt)/(d)) - (d/(2.0*Re)));
-  return el;
-}
-
-String CreateCommand(float balloonLon, float balloonLat, float balloonAlt, float groundStationlon, float groundStationlat, float groundStationAlt){
-  String command;
-  float d, Azimuth, Elevation;
-  
-  balloonLat = (balloonLat*pi)/180;              //[radian]
-  balloonLon = (balloonLon*pi)/180;              //[radian]
-  groundStationlat = (groundStationlat*pi)/180;  //[radian]
-  groundStationlon = (groundStationlon*pi)/180;  //[radian]
-      
-  d = findDistance(balloonLon, balloonLat, groundStationlon, groundStationlat);
-  
-  Azimuth = findAzimuth(balloonLon, balloonLat, groundStationlon, groundStationlat, d);
-  Azimuth = (Azimuth*180)/pi;
-
-  Elevation = findElevation(balloonAlt, groundStationAlt, d);
-  Elevation = (Elevation*180)/pi;
-  command = "W";
-  if (Azimuth <= 9){
-    command = command + "00" + String(int(Azimuth)) + " ";
-  } else if (Azimuth <= 99){
-    command = command + "0" + String(int(Azimuth)) + " ";
-  } else {
-    command = command + String(int(Azimuth)) + " ";
-  }
-  if (Elevation <= 9){
-    command = command + "00" + String(int(Elevation));
-  } else if (Elevation <= 99){
-    command = command + "0" + String(int(Elevation));
-  } else {
-    command = command + String(int(Elevation));
-  }
-  
-  return command;
-}
-
 
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 //unsigned long long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
-  char* intPtr = malloc (sizeof(unsigned long long));
+  char* intPtr=malloc (sizeof(unsigned long long));
   unsigned long long temp;
   //Void pointer to same location to return
 
@@ -761,4 +231,135 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
   free(intPtr);
   //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
   return temp;
+}
+
+
+void GPSstuff() {
+  bool newdata = false;
+  int64_t start = millis();       // starts a count of millisec since the code began 
+  while (millis() - start < 250) {     // Update every 1 seconds
+    if (feedgps())                      // if serial1 is available and can read gps.encode
+      newdata = true;
+  }
+  if (newdata) {  // if locked
+    gpsdump(gps);
+     
+    
+    //using GPS ------------------------------------------------------------------------------------------
+    Serial.println("LOCKED ON");
+    //Serial.print("Balloon Altitude: ");
+    balloonAlt = gps.altitude(); 
+  }else{          // if not locked
+    Serial.println("Not Locked");
+  }
+}
+
+
+void SENSORstuff() {
+    D1 = getVal(ADDRESS, 0x48); // Pressure raw
+    D2 = getVal(ADDRESS, 0x58);// Temperature raw
+    // dT   = D2 - (C[5]*(2^8));
+    dT   = D2 - ((uint32_t)C[5] << 8); //Difference between actual and reference temperature
+    OFF  = ((int64_t)C[2] << 16) + ((dT * C[4]) >> 7); //Offset at actual temperature
+    SENS = ((int32_t)C[1] << 15) + ((dT * C[3]) >> 8); //Sensitivity at actual temperature
+    TEMP = (((int64_t)dT * (int64_t)C[6]) >> 23) + 2000; //Actual temperature
+    if(TEMP < 2000) // if temperature lower than 20 Celsius 
+    {
+      int32_t T1    = 0;
+      int64_t OFF1  = 0;
+      int64_t SENS1 = 0;
+      T1    = pow(dT, 2) / 2147483648;
+      OFF1  = 5 * pow((TEMP - 2000), 2) / 2;
+      SENS1 = 5 * pow((TEMP - 2000), 2) / 4;
+      if(TEMP < -1500) // if temperature lower than -15 Celsius 
+      {
+        OFF1  = OFF1 + 7 * pow((TEMP + 1500), 2); 
+        SENS1 = SENS1 + 11 * pow((TEMP + 1500), 2) / 2;
+      }
+      TEMP -= T1;
+      OFF -= OFF1; 
+      SENS -= SENS1;
+    }
+    //double Temperature = (float)TEMP / 100;
+    Temperature_cC = TEMP + 6000;
+    P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
+    //double Pressure = (float)P / 100;
+    Pressure_dP = P;
+    //Serial.print("Temperature = ");
+    //Serial.print(Temperature_cC);
+    //Serial.print("      Actual Pressure = ");
+    //Serial.print(Pressure);
+    //Serial.print("      Pressure_dP = ");
+    //Serial.println(Pressure_dP);
+}
+
+// Get and process GPS data
+void gpsdump(TinyGPS &gps) {
+  //unsigned long age;
+  gps.f_get_position(&balloonLat, &balloonLon, &age);
+  //Serial.print(balloonLat, 4); 
+  //Serial.print(", "); 
+  //Serial.println(balloonLon, 4);
+}
+
+// Feed data as it becomes available 
+bool feedgps() {
+  while (Serial1.available()) {
+    if (gps.encode(Serial1.read()))
+      return true;
+  }
+  return false;
+}
+
+// functions for Sensor------------------------------------------------------------------------------------------
+long getVal(int address, byte code)
+{
+ unsigned long ret = 0;
+ Wire.beginTransmission(address);
+ Wire.write(code);
+ Wire.endTransmission();
+ delay(10);
+ // start read sequence
+ Wire.beginTransmission(address);
+ Wire.write((byte) 0x00);
+ Wire.endTransmission();
+ Wire.beginTransmission(address);
+ Wire.requestFrom(address, (int)3);
+ if (Wire.available() >= 3)
+ {
+   ret = Wire.read() * (unsigned long)65536 + Wire.read() * (unsigned long)256 + Wire.read();
+ }
+ else {
+   ret = -1;
+ }
+ Wire.endTransmission();
+ return ret;
+}
+
+void initial(uint8_t address)
+{
+ Serial.println();
+ Serial.println("PROM COEFFICIENTS ivan");
+ Wire.beginTransmission(address);
+ Wire.write(0x1E); // reset
+ Wire.endTransmission();
+  
+ delay(10);
+ for (int i=0; i<6  ; i++) {
+   Wire.beginTransmission(address);
+   Wire.write(0xA2 + (i * 2));
+   Wire.endTransmission();
+   Wire.beginTransmission(address);
+   Wire.requestFrom(address, (uint8_t) 6);
+   delay(1);
+   if(Wire.available())
+   {
+      C[i+1] = Wire.read() << 8 | Wire.read();
+   }
+   else {
+     Serial.println("Error reading PROM 1"); // error reading the PROM or communicating with the device
+   }
+   Serial.println(C[i+1]);
+ }
+ Serial.println();
 }
