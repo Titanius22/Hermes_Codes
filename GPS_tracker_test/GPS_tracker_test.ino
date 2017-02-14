@@ -67,7 +67,6 @@ unsigned int Temperature_cC; //RealTemp +60C (to remove negative) then *10^2 to 
 unsigned long Pressure_dP; //in decaPascels *10^2;
 
 //For sending
-unsigned long lineCount = 0;
 char endLine[3] = {'E', 'N', 'D'};
 //char CharsToSend[24];
 //char* CharsToSend = malloc(24);
@@ -102,6 +101,9 @@ void setup() {
   //updateCharsToSend();
   
   Wire.onRequest(requestEvent); // register event
+  
+  updateCharsToSend();
+  
 }
 
 void loop() {
@@ -110,11 +112,9 @@ void loop() {
   
   if(newdata){
   
-	  loloballoonLat = (long) (balloonLat*1000000)
-	  loloballoonLon = (long) (balloonLon*1000000)
-	  loloballoonAlt = (long) (balloonAlt*100)
-	  
-	  
+	  loloballoonLat = (long long) (balloonLat*1000000)
+	  loloballoonLon = (long long) (balloonLon*1000000)
+	  longballoonAlt = (long) (balloonAlt*100)
 	  
 	  updateCharsToSend();
 	  
@@ -142,7 +142,7 @@ void loop() {
 	  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
 	  //lineCount++; // increments in updateCharsToSend
   }
-  delay(300);
+  delay(500);
 }
 
 // function that executes whenever data is requested by master
@@ -167,47 +167,62 @@ void requestEvent() {
 
 //char* updateCharsToSend(){
 void updateCharsToSend(){
-  free(CharsToSend);
-  CharsToSend = malloc(22);
-  writeTo=CharsToSend;
-  unsigned int intBuflineCount;
-  ////////////////////////unsigned long longBuflatitude;
-  ////////////////////////unsigned long longBuflongitude;
-  ////////////////////////unsigned long intBufaltitude;
-  unsigned int intBuftemperature;
-  unsigned int intBufpressure;
+	free(CharsToSend);
+	CharsToSend = malloc(32);
+	writeTo=CharsToSend;
 
-  //Line counter-------------------------------------------
-  intBuflineCount = lineCount;
-  insertBytesFromInt(&intBuflineCount, &writeTo, 3);
+	//Line counter-------------------------------------------
+	unsigned long intBuflineCount = 4567;
+	insertBytesFromInt(&intBuflineCount, &writeTo, 3);
 
-  //Latitude * 10^5 positive only----------------should be 10^10-----------
-  longBuflatitude = (unsigned long)(balloonLat * 100000);
-  insertBytesFromInt(&longBuflatitude, &writeTo, 4);
+	//Latitude * 10^5 positive only----------------should be 10^10-----------
+	//longBuflatitude = (unsigned long long)(balloonLat * 100000);
+	insertBytesFromInt(&loloballoonLat, &writeTo, 5);
 
-  //Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
-  longBuflongitude = (unsigned long)(balloonLon * 100000);
-  insertBytesFromInt(&longBuflongitude, &writeTo, 4);
+	//Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
+	//longBuflongitude = (unsigned long long)(balloonLon * 100000);
+	insertBytesFromInt(&loloballoonLon, &writeTo, 5);
 
-  //Altitude * 100--------------------------------------------
-  intBufaltitude = balloonAlt * 100;
-  insertBytesFromInt(&intBufaltitude, &writeTo, 3);
+	//Altitude * 100--------------------------------------------
+	//long intBufaltitude = 1000 * 100;
+	insertBytesFromInt(&longballoonAlt, &writeTo, 3);
 
-  //Temperature count------------------------------------------
-  intBuftemperature = 4565;
-  insertBytesFromInt(&intBuftemperature, &writeTo, 2);
+	//Thermistor count------------------------------------------
+	unsigned int intBuftemperature = 450;
+	insertBytesFromInt(&intBuftemperature, &writeTo, 2);
 
-  //Pressure count---------------------------------------------
-  intBufpressure = Pressure_dP;
-  insertBytesFromInt(&intBufpressure, &writeTo, 3);
+	//Battery Voltage---------------------------------------------
+	unsigned short intBufpressure = 120;
+	insertBytesFromInt(&intBufpressure, &writeTo, 1);
 
-  //End of line chars-------------------------------------------
+	//Magnotometer X---------------------------------------------
+	short intBufpressure2 = 80;
+	insertBytesFromInt(&intBufpressure2, &writeTo, 1);
 
-  CharsToSend[19] = endLine[0];
-  CharsToSend[20] = endLine[1];
-  CharsToSend[21] = endLine[2];
+	//Magnotometer Y---------------------------------------------
+	short intBufpressure3 = 60;
+	insertBytesFromInt(&intBufpressure3, &writeTo, 1);
 
-  //lineCount++;
+	//Magnotometer Z---------------------------------------------
+	short intBufpressure4 = 40;
+	insertBytesFromInt(&intBufpressure4, &writeTo, 1);
+
+	//Humidity---------------------------------------------
+	unsigned short intBufpressure5 = 96;
+	insertBytesFromInt(&intBufpressure5, &writeTo, 1);
+
+	//Pressure---------------------------------------------
+	unsigned long intBufpressure6 = 102300;
+	insertBytesFromInt(&intBufpressure6, &writeTo, 4);
+
+	//Internal Temperature---------------------------------------------
+	unsigned int intBufpressure7 = 15;
+	insertBytesFromInt(&intBufpressure7, &writeTo, 2);
+
+	CharsToSend[29] = endLine[0];
+	CharsToSend[30] = endLine[1];
+	CharsToSend[31] = endLine[2];
+
 }
 
 

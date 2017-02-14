@@ -33,6 +33,7 @@ short madeConnection = 0; //becomes true when connection is made. If connection 
 FILE *SocketNumFile;
 char SocketNumFileData[5];
 int ServerFileNum = 0;
+short counter = 0;
 
 
 int main(int argc, char *argv[])
@@ -74,9 +75,16 @@ int main(int argc, char *argv[])
         tryNewSocketConnection();
 		
 		while (connectionError >= 0){
-			//read(file, recvBuf, 22);
+			
+			if(counter%500 == 0){
+				read(file, recvBuf, 32);
+				TripleData();
+				counter = 0;
+			}		
 			
 			connectionError = write(ServerFileNum, recvBuf, 96);
+			
+			
 			/*if(lineCounter%10 == 0){
 				char* writeArray=buf;
 				char** wrPtr=&writeArray;
@@ -125,49 +133,49 @@ void SetNewData(){
 	//Latitude 
 	//long longBuflatitude = (unsigned long)(29.210592 * 1000000); //East Ocean
 	//long longBuflatitude = (unsigned long)(28.528328 * 1000000); //Orlando
-	long longBuflatitude = (unsigned long)(30.327081 * 1000000); //Jacksonville
+	unsigned long longBuflatitude = (unsigned long)(30.327081 * 1000000); //Jacksonville
 	insertBytesFromInt(&longBuflatitude, &writeTo, 5);
 
 	//Longitude
 	//long longBuflongitude = (unsigned long)(81.001407 * 1000000); //East Ocean
 	//long longBuflongitude = (unsigned long)(81.385902 * 1000000); //Orlando 
-	long longBuflongitude = (unsigned long)(81.641377 * 1000000); //Jacksonville
+	unsigned long longBuflongitude = (unsigned long)(81.641377 * 1000000); //Jacksonville
 	insertBytesFromInt(&longBuflongitude, &writeTo, 5);
 
 	//Altitude * 100--------------------------------------------
-	int intBufaltitude = 1000 * 100;
+	unsigned int intBufaltitude = 1000 * 100;
 	insertBytesFromInt(&intBufaltitude, &writeTo, 3);
 
 	//Thermistor count------------------------------------------
-	int intBuftemperature = 450;
+	unsigned short intBuftemperature = 450;
 	insertBytesFromInt(&intBuftemperature, &writeTo, 2);
 
 	//Battery Voltage---------------------------------------------
-	int intBufpressure = 120;
+	unsigned short intBufpressure = 120;
 	insertBytesFromInt(&intBufpressure, &writeTo, 1);
 
 	//Magnotometer X---------------------------------------------
-	int intBufpressure2 = 80;
+	short intBufpressure2 = 80;
 	insertBytesFromInt(&intBufpressure2, &writeTo, 1);
 
 	//Magnotometer Y---------------------------------------------
-	int intBufpressure3 = 60;
+	short intBufpressure3 = 60;
 	insertBytesFromInt(&intBufpressure3, &writeTo, 1);
 
 	//Magnotometer Z---------------------------------------------
-	int intBufpressure4 = 40;
+	short intBufpressure4 = 40;
 	insertBytesFromInt(&intBufpressure4, &writeTo, 1);
 
 	//Humidity---------------------------------------------
-	int intBufpressure5 = 96;
+	unsigned short intBufpressure5 = 96;
 	insertBytesFromInt(&intBufpressure5, &writeTo, 1);
 
 	//Pressure---------------------------------------------
-	int intBufpressure6 = 102300;
+	unsigned int intBufpressure6 = 102300;
 	insertBytesFromInt(&intBufpressure6, &writeTo, 4);
 
 	//Internal Temperature---------------------------------------------
-	int intBufpressure7 = 15;
+	short intBufpressure7 = 15;
 	insertBytesFromInt(&intBufpressure7, &writeTo, 2);
 
 	//End of line chars-------------------------------------------
@@ -175,6 +183,77 @@ void SetNewData(){
 	recvBuf[29] = 'E';
 	recvBuf[30] = 'N';
 	recvBuf[31] = 'D';
+	
+	// repeat data for the second 2 lines of the 96 byte (3 x 32) transmission
+	recvBuf[32] = recvBuf[0];
+	recvBuf[33] = recvBuf[1];
+	recvBuf[34] = recvBuf[2];
+	recvBuf[35] = recvBuf[3];
+	recvBuf[36] = recvBuf[4];
+	recvBuf[37] = recvBuf[5];
+	recvBuf[38] = recvBuf[6];
+	recvBuf[39] = recvBuf[7];
+	recvBuf[40] = recvBuf[8];
+	recvBuf[41] = recvBuf[9];
+	recvBuf[42] = recvBuf[10];
+	recvBuf[43] = recvBuf[11];
+	recvBuf[44] = recvBuf[12];
+	recvBuf[45] = recvBuf[13];
+	recvBuf[46] = recvBuf[14];
+	recvBuf[47] = recvBuf[15];
+	recvBuf[48] = recvBuf[16];
+	recvBuf[49] = recvBuf[17];
+	recvBuf[50] = recvBuf[18];
+	recvBuf[51] = recvBuf[19];
+	recvBuf[52] = recvBuf[20];
+	recvBuf[53] = recvBuf[21];
+	recvBuf[54] = recvBuf[22];
+	recvBuf[55] = recvBuf[23];
+	recvBuf[56] = recvBuf[24];
+	recvBuf[57] = recvBuf[25];
+	recvBuf[58] = recvBuf[26];
+	recvBuf[59] = recvBuf[27];
+	recvBuf[60] = recvBuf[28];
+	recvBuf[61] = recvBuf[29];
+	recvBuf[62] = recvBuf[30];
+	recvBuf[63] = recvBuf[31];
+	
+	recvBuf[64] = recvBuf[0];
+	recvBuf[65] = recvBuf[1];
+	recvBuf[66] = recvBuf[2];
+	recvBuf[67] = recvBuf[3];
+	recvBuf[68] = recvBuf[4];
+	recvBuf[69] = recvBuf[5];
+	recvBuf[70] = recvBuf[6];
+	recvBuf[71] = recvBuf[7];
+	recvBuf[72] = recvBuf[8];
+	recvBuf[73] = recvBuf[9];
+	recvBuf[74] = recvBuf[10];
+	recvBuf[75] = recvBuf[11];
+	recvBuf[76] = recvBuf[12];
+	recvBuf[77] = recvBuf[13];
+	recvBuf[78] = recvBuf[14];
+	recvBuf[79] = recvBuf[15];
+	recvBuf[80] = recvBuf[16];
+	recvBuf[81] = recvBuf[17];
+	recvBuf[82] = recvBuf[18];
+	recvBuf[83] = recvBuf[19];
+	recvBuf[84] = recvBuf[20];
+	recvBuf[85] = recvBuf[21];
+	recvBuf[86] = recvBuf[22];
+	recvBuf[87] = recvBuf[23];
+	recvBuf[88] = recvBuf[24];
+	recvBuf[89] = recvBuf[25];
+	recvBuf[90] = recvBuf[26];
+	recvBuf[91] = recvBuf[27];
+	recvBuf[92] = recvBuf[28];
+	recvBuf[93] = recvBuf[29];
+	recvBuf[94] = recvBuf[30];
+	recvBuf[95] = recvBuf[31];
+}
+
+
+void TripleData(){
 	
 	// repeat data for the second 2 lines of the 96 byte (3 x 32) transmission
 	recvBuf[32] = recvBuf[0];
