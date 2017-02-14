@@ -13,6 +13,8 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
+unsigned long getIntFromByte(unsigned char** , short );
+
 // The slave Arduino address
 #define ADDRESS 0x04
 

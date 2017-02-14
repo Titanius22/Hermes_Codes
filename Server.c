@@ -18,6 +18,8 @@ unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
 void tryNewSocketConnection();
 void SetNewData();
+void TripleData();
+void updateLineCounter();
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -33,7 +35,8 @@ short madeConnection = 0; //becomes true when connection is made. If connection 
 FILE *SocketNumFile;
 char SocketNumFileData[5];
 int ServerFileNum = 0;
-short counter = 0;
+unsigned int = 0;
+int i2cReadStatus;
 
 
 int main(int argc, char *argv[])
@@ -43,16 +46,16 @@ int main(int argc, char *argv[])
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
-	int file;
+	int i2cfile;
 
-	if ((file = open(devName, O_RDWR)) < 0) {
+	if ((i2cfile = open(devName, O_RDWR)) < 0) {
 		fprintf(stderr, "I2C: Failed to access %d\n", devName);
 		exit(1);
 	}
 
 	printf("I2C: acquiring buss to 0x%x\n", ADDRESS);
 
-	if (ioctl(file, I2C_SLAVE, ADDRESS) < 0) {
+	if (ioctl(i2cfile, I2C_SLAVE, ADDRESS) < 0) {
 		fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);
 		exit(1);
 	}
@@ -76,13 +79,15 @@ int main(int argc, char *argv[])
 		
 		while (connectionError >= 0){
 			
-			if(counter%500 == 0){
-				read(file, recvBuf, 32);
+			if(counter%200 == 0){
+				i2cReadStatus = read(i2cfile, recvBuf, 32);
 				TripleData();
-				counter = 0;
 			}		
 			
 			connectionError = write(ServerFileNum, recvBuf, 96);
+			
+			counter++;
+			updateLineCounter();
 			
 			
 			/*if(lineCounter%10 == 0){
@@ -323,6 +328,23 @@ void TripleData(){
 	recvBuf[95] = recvBuf[31];
 }
 
+
+void updateLineCounter(){
+	
+	unsigned char* writeTo=recvBuf;
+	
+	//Line counter-------------------------------------------
+	insertBytesFromInt(&counter, &writeTo, 3);
+	
+	// repeat data for the second 2 lines of the 96 byte (3 x 32) transmission
+	recvBuf[32] = recvBuf[0];
+	recvBuf[33] = recvBuf[1];
+	recvBuf[34] = recvBuf[2];
+	
+	recvBuf[64] = recvBuf[0];
+	recvBuf[65] = recvBuf[1];
+	recvBuf[66] = recvBuf[2];
+}
 
 //SERVER STUFF. setting up socket
 void tryNewSocketConnection(){
