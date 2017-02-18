@@ -29,8 +29,8 @@
  
  These pin assignments can be changed
  by changting the assignment statements below.
- G-5500 analog azimuth to Arduino pin A0
- G-5500 analog elevation to Arduino pin A1
+ G-5500 analog elevation to Arduino pin A0
+ G-5500 analog azimuth to Arduino pin A1
  Use a small signal transistor switch or small reed relay for these connections
  G-5500 elevation rotor up to Arduino pin 8
  G-5500 elevation rotor down to Arduino pin 9
@@ -143,13 +143,13 @@ const float Re = 3956.0; //[miles]
 const float pi = 3.14159265359; 
 float distancefromballoontoGS = 0;   
                                 //ICI//COA//KENNEL CLUB//TEST
-float balloonLat              = 29.191585;//29.187366;//29.166656;//34.28889;//[degrees]
-float balloonLon              = 81.046269;//81.049893;//81.080002;//117.6458;//[degrees]
+float balloonLat              = 30.32;//29.191585;//29.187366;//29.166656;//34.28889;//[degrees]
+float balloonLon              = 81.64;//81.046269;//81.049893;//81.080002;//117.6458;//[degrees]
 float balloonAlt              = 0;//10064.0/5280.0;//[miles]
 //Hard coded for ERAU Daytona Beach Campus;//Test values
-float groundStationlat        = 29.188330;//34.22389;//[degrees]
-float groundStationlon        = 81.048108;//118.0603;//[degrees]
-float groundStationAlt        = 0;//5710.0/5280.0;//[miles]
+float groundStationlat        = 29.187941;//29.187923;//34.22389;//[degrees]
+float groundStationlon        = 81.048325;//81.048635;//118.0603;//[degrees]
+float groundStationAlt        = 0;//5710.0/5280.0;//[miles]29.187941, -81.048325
 float d; 
 float Azimuth; 
 float Elevation; 
@@ -261,18 +261,9 @@ void loop()
       String temp=Serial.readString();
       
       //receiveData(RecievedCommand);//NEEDS TO BE DELETED FOR FINAL CODE
+      Serial.println("");
       Serial.println("Arduino Working");
-      command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
-      
-      /////////////////////////////////////////
-      //command = "W090 090";               ///
-      /////////////////////////////////////////
-      //////////////////////////////////////////////////////////////////////////////////////////////////////
-      //Serial.println("Command Sent: " + command);
-      for (i=0; i<=command.length(); i++){
-        decodeGS232(command.charAt(i));
-        //Serial.print(command.charAt(i));
-      }
+
       //Serial.println(""); 
     //}
     unsigned long rtcCurrent = millis(); // get current rtc value
@@ -288,29 +279,39 @@ void loop()
          readAzimuth(); // get current azimuth from G-5500
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-         Serial.print("Commanded Azimuth: ");
-         Serial.println(_newAzimuth/100);
-         Serial.print("Azimuth Read: ");
-         Serial.println(_rotorAzimuth/100);
+         Serial.print("(deg) Balloon Lat     : ");
+         Serial.println(balloonLat,6);
+         Serial.print("(deg) Balloon Lon     : ");
+         Serial.println(balloonLon,6);
+         Serial.print("(deg) Balloon Altitude: ");
+         Serial.println(balloonAlt,6);
+         
+         Serial.print("(deg) GS Lat          : ");
+         Serial.println(groundStationlat,6);
+         Serial.print("(deg) GS Lon          : ");
+         Serial.println(groundStationlon,6);
+         Serial.print("(deg) GS Altitude     : ");
+         Serial.println(groundStationAlt,6);
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-         Serial.print("Commanded Elevation: ");
+         Serial.print("(deg) AZ Commanded    : ");
+         Serial.println(_newAzimuth/100);
+         Serial.print("(deg) AZ Read         : ");
+         Serial.println(_rotorAzimuth/100);
+         Serial.print("(volt)AZ Voltage Read : ");
+         Serial.println(((float)analogRead(_azimuthInputPin)*5/1024),6);
+         
+         Serial.print("(deg) EL Commanded    : ");
          Serial.println(_newElevation/100);
-         Serial.print("Elevation Read: ");
+         Serial.print("(deg) EL Read         : ");
          Serial.println(_rotorElevation/100);
+         Serial.print("(volt)EL Voltage Read : ");
+         Serial.println(((float)analogRead(_elevationInputPin)*5/1024),6);
 
          //Serial.print("EL raw Read: ");
          //Serial.println(analogRead(_elevationInputPin));
          //Serial.print("AZ raw Read: ");
          //Serial.println(analogRead(_azimuthInputPin));
-
-         Serial.print("EL Voltage Read: ");
-         Serial.println((float)analogRead(_elevationInputPin)*5/1024);
-         
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-         Serial.print("AZ Voltage Read: ");
-         */
-         Serial.println((float)analogRead(_azimuthInputPin)*5/1024);
 
          if (recievedNewI2Cdata){
 
@@ -329,9 +330,10 @@ void loop()
               //Serial.println(data[i]);
               i++;
             }
-            
-            Serial.print(RecievedData);
-            Serial.println("||||||||||||||||");
+
+            /*Serial.print("Command Recived: ");
+            Serial.println(RecievedData);*/
+            //Serial.println("||||||||||||||||");
             //Serial.println(RecievedData);
             
             //RecievedData += ' '; // adds a space to the end of the last number to have it recognized in the for loop
@@ -369,15 +371,17 @@ void loop()
         
               }
             }
-            //balloonLat = balloonLat/100000;
-            //balloonLon = balloonLon/100000;
-            //balloonAlt = balloonAlt/100;
+            balloonLat = balloonLat/1000000;
+            balloonLon = balloonLon/1000000;
+            balloonAlt = (balloonAlt/100)/5280;
+            /*
             Serial.print("balloonLat: ");
             Serial.println(balloonLat);
             Serial.print("balloonLon: ");
             Serial.println(balloonLon);
             Serial.print("balloonAlt: ");
             Serial.println(balloonAlt);
+            */
 
 
       RecievedData.remove(0, j+1); // removes old data
@@ -393,20 +397,33 @@ void loop()
           
          }
          
+      command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
+      
+      /////////////////////////////////////////
+      //command = "W090 090";               ///
+      /////////////////////////////////////////
+      //////////////////////////////////////////////////////////////////////////////////////////////////////
+      //Serial.println("Command Sent: " + command);
+      for (i=0; i<=command.length(); i++){
+        decodeGS232(command.charAt(i));
+        //Serial.print(command.charAt(i));
+      }
+    
+         
          if ( (abs(_rotorAzimuth - _newAzimuth) > _closeEnough) && _azimuthMove ) { // see if azimuth move is required
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-            //Serial.println("-SHOULD MOVE-");
+            Serial.println("-SHOULD MOVE-");
             
             updateAzimuthMove();
 
             //ERIKS STUFFS
-            /*if (abs(_rotorAzimuth - _newAzimuth) < _closeEnoughSmoothing){
+            if (abs(_rotorAzimuth - _newAzimuth) < _closeEnoughSmoothing){
               
               delay(500); //Slows mount to limit current surges from changing the voltage
               digitalWrite(_G5500LeftPin, LOW);
               digitalWrite(_G5500RightPin, LOW);
             
-            }*/
+            }
             
             readAzimuth();
             //Serial.print("Ground Station AZ: ");
@@ -415,7 +432,7 @@ void loop()
          }
         else{  // no move required - turn off azimuth rotor
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-           //Serial.println("-SHOULD NOT MOVE-");
+           Serial.println("-SHOULD NOT MOVE-");
            digitalWrite(_G5500LeftPin, LOW);
            digitalWrite(_G5500RightPin, LOW);
            _azimuthMove = false;
@@ -439,13 +456,13 @@ void loop()
             updateElevationMove();
 
             //ERIKS STUFFS
-            /*if (abs(_rotorElevation - _newElevation) < _closeEnoughSmoothing){
+            if (abs(_rotorElevation - _newElevation) < _closeEnoughSmoothing){
               
               delay(500); //Slows mount to limit current surges from changing the voltage
               digitalWrite(_G5500UpPin, LOW);
               digitalWrite(_G5500DownPin, LOW);
             
-            } */
+            } 
             
             readElevation();
             //Serial.print("Ground Station EL: ");
@@ -484,10 +501,9 @@ void loop()
 
 // callback for received data
 void receiveData(){ // should not accept any values
-  
+  Serial.print("-Recieved Stuff-");
   recievedNewI2Cdata = true;
-  
-  Serial.println("Recieved Stuff");
+  //Serial.println("Recieved Stuff");
 }
 
 

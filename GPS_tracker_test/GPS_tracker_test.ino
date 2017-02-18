@@ -38,16 +38,16 @@ before satellite lock may be inaccurate.
 TinyGPS gps;
 // for Sensor
 #include <Wire.h>
-#define ADDRESS 0x76 //0x77
+//#define ADDRESS 0x76 //0x77
 
 // for GPS------------------------------------------------------------------------------------------
 unsigned long age;
-float balloonLat              = 34.28889;//[degrees]
-float balloonLon              = 91.6458;//[degrees]
-float balloonAlt              = 10064.0;///5280.0;//[miles]
-unsigned long long loloballoonLat             = 34.28889;//[degrees] /////////////////////////////////////////////////////FIX THIS lolo
-unsigned long long loloballoonLon             = 91.6458;//[degrees]
-unsigned long longballoonAlt             = 10064.0;///5280.0;//[miles]
+float balloonLat              = 40;//34.28889;//[degrees]
+float balloonLon              = 50;//91.6458;//[degrees]
+float balloonAlt              = 60;//10064.0;///5280.0;//[miles]
+unsigned long long loloballoonLat             = 10;//34.28889;//[degrees] /////////////////////////////////////////////////////FIX THIS lolo
+unsigned long long loloballoonLon             = 20;//91.6458;//[degrees]
+unsigned long longballoonAlt             = 30;//10064.0;///5280.0;//[miles]
 
 
 
@@ -70,7 +70,7 @@ unsigned long Pressure_dP; //in decaPascels *10^2;
 char endLine[3] = {'E', 'N', 'D'};
 //char CharsToSend[24];
 //char* CharsToSend = malloc(24);
-unsigned char* CharsToSend = malloc(22);
+unsigned char* CharsToSend;// = "HELLO!!!!!!!!!!!!!!!!!!!!!!!!!!!";// malloc(32);
 unsigned char* writeTo=CharsToSend;
 
 unsigned char* writeArray=CharsToSend;
@@ -95,7 +95,7 @@ void setup() {
   PORTC |= (1 << 5);
   delay(100);
   
-  initial(ADDRESS);
+  //initial(ADDRESS);
   //GPSstuff(); 
   //SENSORstuff();
   //updateCharsToSend();
@@ -107,16 +107,27 @@ void setup() {
 }
 
 void loop() {
+  //Serial.print((char) CharsToSend[0]);
+  //Serial.print((char) CharsToSend[1]);
+  //Serial.print((char) CharsToSend[2]);
+  //Serial.print((char) CharsToSend[3]);
+  //Serial.print((char) CharsToSend[4]);
+  //Serial.print((char) CharsToSend[5]);
+  
   //delay(1000);
   GPSstuff();
+
+  //updateCharsToSend();
   
   if(newdata){
-  
-	  loloballoonLat = (long long) (balloonLat*1000000)
-	  loloballoonLon = (long long) (balloonLon*1000000)
-	  longballoonAlt = (long) (balloonAlt*100)
+    
+    updateCharsToSend();
+    
+	  loloballoonLat = (unsigned long long) (balloonLat*1000000);
+	  loloballoonLon = (unsigned long long) (balloonLon*-1000000);
+	  longballoonAlt = (unsigned long) (balloonAlt*100);
 	  
-	  updateCharsToSend();
+	  
 	  
 	//  writeArray=CharsToSend;
 	//  wrPtr=&writeArray;
@@ -142,19 +153,32 @@ void loop() {
 	  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
 	  //lineCount++; // increments in updateCharsToSend
   }
+
+  Serial.print("LAT: ");
+  Serial.println(balloonLat);
+  Serial.print("LON: ");
+  Serial.println(balloonLon);
+  Serial.print("ALT: ");
+  Serial.println(balloonAlt);
+  Serial.println("");
+  
   delay(500);
 }
 
 // function that executes whenever data is requested by master
 // this function is registered as an event, see setup()
 void requestEvent() {
+  Serial.println("requestEvent");
   //GPSstuff();
   //SENSORstuff();
   //char* CharsToSend = updateCharsToSend();
   //updateCharsToSend();
   //lineCount++;
   //updateCharsToSend();
-  Wire.write(CharsToSend, 32); // respond with message of 32 byte
+
+  Wire.write(CharsToSend,32); // respond with message of 32 byte
+  //Wire.write("W", 1); // respond with message of 32 byte
+  
   //updateCharsToSend();
   //free(CharsToSend);
   //Wire.write("ftgyho04856000r57j0k?0");
@@ -196,15 +220,15 @@ void updateCharsToSend(){
 	insertBytesFromInt(&intBufpressure, &writeTo, 1);
 
 	//Magnotometer X---------------------------------------------
-	short intBufpressure2 = 80;
+	unsigned short intBufpressure2 = 80;
 	insertBytesFromInt(&intBufpressure2, &writeTo, 1);
 
 	//Magnotometer Y---------------------------------------------
-	short intBufpressure3 = 60;
+	unsigned short intBufpressure3 = 60;
 	insertBytesFromInt(&intBufpressure3, &writeTo, 1);
 
 	//Magnotometer Z---------------------------------------------
-	short intBufpressure4 = 40;
+	unsigned short intBufpressure4 = 40;
 	insertBytesFromInt(&intBufpressure4, &writeTo, 1);
 
 	//Humidity---------------------------------------------
@@ -222,7 +246,6 @@ void updateCharsToSend(){
 	CharsToSend[29] = endLine[0];
 	CharsToSend[30] = endLine[1];
 	CharsToSend[31] = endLine[2];
-
 }
 
 
@@ -297,3 +320,31 @@ bool feedgps() {
   }
   return false;
 }
+
+//void initial(uint8_t address)
+//{
+// Serial.println();
+// Serial.println("PROM COEFFICIENTS ivan");
+// Wire.beginTransmission(address);
+// Wire.write(0x1E); // reset
+// Wire.endTransmission();
+//  
+// delay(10);
+// for (int i=0; i<6  ; i++) {
+//   Wire.beginTransmission(address);
+//   Wire.write(0xA2 + (i * 2));
+//   Wire.endTransmission();
+//   Wire.beginTransmission(address);
+//   Wire.requestFrom(address, (uint8_t) 6);
+//   delay(1);
+//   if(Wire.available())
+//   {
+//      C[i+1] = Wire.read() << 8 | Wire.read();
+//   }
+//   else {
+//     Serial.println("Error reading PROM 1"); // error reading the PROM or communicating with the device
+//   }
+//   Serial.println(C[i+1]);
+// }
+// Serial.println();
+//}
