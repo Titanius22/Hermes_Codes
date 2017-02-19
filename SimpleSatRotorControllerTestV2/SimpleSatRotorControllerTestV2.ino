@@ -158,7 +158,7 @@ String command = "";
 //                        1 latitude longitude elevation
 String RecievedCommand = "2 29 81 22";
 
-char* CharsToReceive = malloc(22);
+//char* CharsToReceive = malloc(22);
 //char* writeArray=CharsToReceive;
 //char** wrPtr=&writeArray;
 
@@ -201,12 +201,16 @@ String elRotorMovement;   // string for el rotor move display
 // ------ Variables for the code to run -----
 // ------------------------------------------------------------
 
-boolean recievedNewI2Cdata = false;
-String RecievedData;
 char ch;
 int valueindex;
 String temp = "";
-
+String Command1inBinary;
+short Command1Length = 12; //Excludes command number char itself
+String Command2inBinary;
+short Command2Length = 12; //Excludes command number char itself
+bool Command3;
+short Command3Length = 1;
+unsigned long RecievedDataArray[3];
 int j;
 
 //
@@ -244,7 +248,7 @@ void setup()
     // initialize i2c as slave
     Wire.begin(SLAVE_ADDRESS);
     // define callbacks for i2c communication
-    Wire.onReceive(receiveData);
+    //Wire.onReceive(receiveData);
     //Wire.onRequest(sendData);
 }
 
@@ -272,40 +276,40 @@ void loop()
     if (rtcCurrent > _rtcLastDisplayUpdate){ // overflow if not true    _rotorMoveUpdateInterval
       // update rotor movement if necessary
       //Serial.println("got in2");
-      if (rtcCurrent - _rtcLastRotorUpdate > _rotorMoveUpdateInterval){
-         _rtcLastRotorUpdate = rtcCurrent; // reset rotor move timer base
-         //Serial.println("got in3");
-         // AZIMUTH       
-         readAzimuth(); // get current azimuth from G-5500
+		if (rtcCurrent - _rtcLastRotorUpdate > _rotorMoveUpdateInterval){
+			_rtcLastRotorUpdate = rtcCurrent; // reset rotor move timer base
+			//Serial.println("got in3");
+			// AZIMUTH       
+			readAzimuth(); // get current azimuth from G-5500
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-         Serial.print("(deg) Balloon Lat     : ");
-         Serial.println(balloonLat,6);
-         Serial.print("(deg) Balloon Lon     : ");
-         Serial.println(balloonLon,6);
-         Serial.print("(deg) Balloon Altitude: ");
-         Serial.println(balloonAlt,6);
-         
-         Serial.print("(deg) GS Lat          : ");
-         Serial.println(groundStationlat,6);
-         Serial.print("(deg) GS Lon          : ");
-         Serial.println(groundStationlon,6);
-         Serial.print("(deg) GS Altitude     : ");
-         Serial.println(groundStationAlt,6);
+			Serial.print("(deg) Balloon Lat     : ");
+			Serial.println(balloonLat,6);
+			Serial.print("(deg) Balloon Lon     : ");
+			Serial.println(balloonLon,6);
+			Serial.print("(deg) Balloon Altitude: ");
+			Serial.println(balloonAlt,6);
+
+			Serial.print("(deg) GS Lat          : ");
+			Serial.println(groundStationlat,6);
+			Serial.print("(deg) GS Lon          : ");
+			Serial.println(groundStationlon,6);
+			Serial.print("(deg) GS Altitude     : ");
+			Serial.println(groundStationAlt,6);
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-         Serial.print("(deg) AZ Commanded    : ");
-         Serial.println(_newAzimuth/100);
-         Serial.print("(deg) AZ Read         : ");
-         Serial.println(_rotorAzimuth/100);
-         Serial.print("(volt)AZ Voltage Read : ");
-         Serial.println(((float)analogRead(_azimuthInputPin)*5/1024),6);
-         
-         Serial.print("(deg) EL Commanded    : ");
-         Serial.println(_newElevation/100);
-         Serial.print("(deg) EL Read         : ");
-         Serial.println(_rotorElevation/100);
-         Serial.print("(volt)EL Voltage Read : ");
-         Serial.println(((float)analogRead(_elevationInputPin)*5/1024),6);
+			Serial.print("(deg) AZ Commanded    : ");
+			Serial.println(_newAzimuth/100);
+			Serial.print("(deg) AZ Read         : ");
+			Serial.println(_rotorAzimuth/100);
+			Serial.print("(volt)AZ Voltage Read : ");
+			Serial.println(((float)analogRead(_azimuthInputPin)*5/1024),6);
+
+			Serial.print("(deg) EL Commanded    : ");
+			Serial.println(_newElevation/100);
+			Serial.print("(deg) EL Read         : ");
+			Serial.println(_rotorElevation/100);
+			Serial.print("(volt)EL Voltage Read : ");
+			Serial.println(((float)analogRead(_elevationInputPin)*5/1024),6);
 
          //Serial.print("EL raw Read: ");
          //Serial.println(analogRead(_elevationInputPin));
@@ -313,101 +317,122 @@ void loop()
          //Serial.println(analogRead(_azimuthInputPin));
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-         if (recievedNewI2Cdata){
+			while(true){//if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-            //unsigned long FirstNum, el; 
-            //unsigned long long lat, lon; 
-            
-            
-            
-            while(Wire.available()) {
-              ch = Wire.read();
-              RecievedData += ch;
-              //dataChArray[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-              //Serial.println(dataChArray[i]);
-              //data[i] = Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-              //dataChArray =+ Wire.read(); /////////////////////////////////////WHERE I GET THE UPDATED VALUES
-              //Serial.println(data[i]);
-              i++;
-            }
+				//unsigned long FirstNum, el; 
+				//unsigned long long lat, lon; 
+				
+				
+				/*
+				char CommandChar;
+				Command1inBinary = "";
+				Command2inBinary = "";
+				Command3 = false;
+				while(Wire.available()) {
+					i = 0;
+					do{
+						if(i == 0){
+							CommandChar = Wire.read();
+							switch(CommandChar){
+								case '1':{ // Changes GS GPS
+									loopComand = Command1Length;
+									break;
+								} 
+								case '2':{ // Changes Balloon GPS
+									loopComand = Command2Length;
+									break;
+								} 
+								case '3':{ //Asks for Az and El
+									loopComand = Command3Length;
+									break;
+								}
+							}
+						}
+						switch(CommandChar){
+							case '1':{ // Changes GS GPS
+								Command1inBinary =+ Wire.read();
+								break;
+							} 
+							case '2':{ // Changes Balloon GPS
+								Command2inBinary =+ Wire.read();
+								break;
+							} 
+							case '3':{ //Asks for Az and El
+								Command3 = true;
+								break;
+							}
+						}
+						i++;
+					}while(i < loopComand)
+				}
+				*/
+				unsigned long returnedData[3]; //Longintude, Latitude, Altitude
+				char CharsToSend[11];
 
-            /*Serial.print("Command Recived: ");
-            Serial.println(RecievedData);*/
-            //Serial.println("||||||||||||||||");
-            //Serial.println(RecievedData);
-            
-            //RecievedData += ' '; // adds a space to the end of the last number to have it recognized in the for loop
-            //RecievedData = String(FirstNum + ' ' + lat + ' ' + lon + ' ' + el + ' ');
-            //Serial.println(RecievedData);
-            valueindex = 1;
-            for (j=2; j<=RecievedData.length(); j++){                                   // GOES THROUGH EVERY CHAR IN THE DATA
-              if(RecievedData.charAt(0)=='1'){/////////////////////for GS values
-                if(RecievedData.charAt(j)==' '){                                        //IF IT HITS A SPACE 
-                  if(valueindex==1){groundStationlat = (temp.toFloat());}       //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==2){groundStationlon = (temp.toFloat());}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==3){groundStationAlt = (temp.toFloat()); break;}  //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TEMPARRAY VALUE 
-                  valueindex = valueindex + 1;
-                }else{
-                  temp = temp + RecievedData.charAt(j);
-                }                                // MODIFIES THE TEMPARARY VALUE
-              }else if(RecievedData.charAt(0)=='2') {//////////////for balloon values
-                if(RecievedData.charAt(j)==' '){                                        //IF IT HITS A SPACE
-                  if(valueindex==1){balloonLat = (temp.toFloat());}             //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==2){balloonLon = (temp.toFloat());}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  else if(valueindex==3){balloonAlt = (temp.toFloat()); break;}        //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT IN THE VARIABLE
-                  temp = "";                                                    //ONCE THE NEXT SPACE IS HIT, THE TMPARRAY VALUE IS MADE PURMANENT, THIS ERASES THE TMPARRAY VALUE 
-                  valueindex = valueindex + 1;
-                }
-                temp = temp + RecievedData.charAt(j);                                   // MODIFIES THE TEMPARARY VALUE
-              }else if(RecievedData.charAt(0)=='3') {/////////////////////for balloon values
-                j = 1; //This is so the remove function below knows where to stop deleting. Commands 1 and 2 stop at the space after the last number, by making j = 1, it is doing the same thing. 
+				char *writeTo=CharsToSend;
+        unsigned long longBuflatitude;
+        unsigned long longBuflongitude;
+        unsigned int intBufaltitude;
 
-        
-        
-        //sendData(RecievedData);
-        
-        
-        
-              }
-            }
-            balloonLat = balloonLat/1000000;
-            balloonLon = balloonLon/1000000;
-            balloonAlt = (balloonAlt/100)/5280;
-            /*
-            Serial.print("balloonLat: ");
-            Serial.println(balloonLat);
-            Serial.print("balloonLon: ");
-            Serial.println(balloonLon);
-            Serial.print("balloonAlt: ");
-            Serial.println(balloonAlt);
-            */
+				//Latitude * 10^5 positive only----------------should be 10^10-----------
+				longBuflatitude = (unsigned long)(29.85782 * 100000);
+				insertBytesFromInt(longBuflatitude, &writeTo, 4);
 
+				//Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
+				longBuflongitude = (unsigned long)(45.26487 * 100000);
+				insertBytesFromInt(longBuflongitude, &writeTo, 4);
 
-      RecievedData.remove(0, j+1); // removes old data
-      if(RecievedData.length() == 0){
-        
-        recievedNewI2Cdata = false;
-        
-      }
-      // else more commands need to be read from the wire buffer so recievedNewI2Cdata will remain true till all is read
-            
+				//Altitude * 100--------------------------------------------
+				intBufaltitude = 489 * 100;
+				insertBytesFromInt(intBufaltitude, &writeTo, 3);
+				
+				Command2inBinary = String(CharsToSend);
 
+				if(Command1inBinary.length() != 0){
+					convertBinaryCommands(Command1inBinary, Command1Length, RecievedDataArray);
+					groundStationlat = ((float)RecievedDataArray[0])/100000;
+					groundStationlon = ((float)RecievedDataArray[1])/100000;
+					//groundStationAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles 	
+          groundStationAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles   		
+				}
+				if(Command2inBinary.length() != 0){
+					convertBinaryCommands(Command2inBinary, Command2Length, RecievedDataArray);
+					balloonLat = ((float)RecievedDataArray[0])/100000;
+					balloonLon = ((float)RecievedDataArray[1])/100000;
+					//balloonAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles
+          balloonAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles 
+				}
+				if(Command3){
+					/////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+					///////////////DO STUFF/////////////////////////////////////////////////////////////////////////////////////////////////////
+					/////////////////////////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////
+					///////////////////////////////////DO STUFF/////////////////////////////////////////////////////////////////////////////////
+					/////////////////////////////////////////////DO STUFF///////////////////////////////////////////////////////////////////////
+					////////////////////////////////////////////////////////DO STUFF////////////////////////////////////////////////////////////
+				}
+       
+				Serial.print("balloonLat: ");
+				Serial.println(balloonLat);
+				Serial.print("balloonLon: ");
+				Serial.println(balloonLon);
+				Serial.print("balloonAlt: ");
+				Serial.println(balloonAlt);
 
-          
-         }
-         
-      command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
-      
-      /////////////////////////////////////////
-      //command = "W090 090";               ///
-      /////////////////////////////////////////
-      //////////////////////////////////////////////////////////////////////////////////////////////////////
-      //Serial.println("Command Sent: " + command);
-      for (i=0; i<=command.length(); i++){
-        decodeGS232(command.charAt(i));
-        //Serial.print(command.charAt(i));
-      }
+       delay(1000);
+
+			}
+
+	command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
+
+	/////////////////////////////////////////
+	//command = "W090 090";               ///
+	/////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	//Serial.println("Command Sent: " + command);
+	for (i=0; i<=command.length(); i++){
+		decodeGS232(command.charAt(i));
+		//Serial.print(command.charAt(i));
+	}
     
          
          if ( (abs(_rotorAzimuth - _newAzimuth) > _closeEnough) && _azimuthMove ) { // see if azimuth move is required
@@ -497,21 +522,6 @@ void loop()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //FUNCTIONS
-
-
-// callback for received data
-void receiveData(){ // should not accept any values
-  Serial.print("-Recieved Stuff-");
-  recievedNewI2Cdata = true;
-  //Serial.println("Recieved Stuff");
-}
-
-
-// callback for sending data
-//void sendData(String data){
-// data = String(_rotorAzimuth/100) + " " + String(_rotorElevation/100);
-// Wire.write(data);
-//}
 
 
 // update elevation rotor move
@@ -759,8 +769,8 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 //unsigned long long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
-  char* intPtr = malloc (sizeof(unsigned long long));
-  unsigned long long temp;
+  char* intPtr = malloc (sizeof(unsigned long));
+  unsigned long temp;
   //Void pointer to same location to return
 
    //Loop Counter
@@ -773,9 +783,29 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
     }
   }
   *arrayStart+=(short)bytes;
-  temp=*((unsigned long long*)intPtr);
+  temp=*((unsigned long*)intPtr);
   free(intPtr);
   //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
   return temp;
 }
 
+void insertBytesFromInt(long int value,unsigned char** byteStart, short numberBytesToCopy){
+
+  unsigned char* valueBytes=(void*)&value;
+  short loopCount=0;
+  for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
+    (*byteStart)[loopCount]=valueBytes[loopCount];
+  }
+  *byteStart+=(short)numberBytesToCopy;
+}
+
+void convertBinaryCommands(String strBinaryCommand, short len, unsigned long returnedData[3]){
+	char buf[35];
+	strBinaryCommand.toCharArray(buf, len);
+	
+	char* writeArray=buf;
+	char** wrPtr=&writeArray;
+	returnedData[0] = (unsigned long)getIntFromByte(wrPtr,4);
+	returnedData[1] = (unsigned long)getIntFromByte(wrPtr,4);
+	returnedData[2] = (unsigned long)getIntFromByte(wrPtr,3);
+}
