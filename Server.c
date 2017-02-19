@@ -12,6 +12,7 @@
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
@@ -20,6 +21,7 @@ void tryNewSocketConnection();
 void SetNewData();
 void TripleData();
 void updateLineCounter();
+bool CheckSumMatches(char* , short);
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -35,7 +37,7 @@ short madeConnection = 0; //becomes true when connection is made. If connection 
 FILE *SocketNumFile;
 char SocketNumFileData[5];
 int ServerFileNum = 0;
-unsigned int = 0;
+unsigned int counter = 0;
 int i2cReadStatus;
 
 
@@ -43,6 +45,7 @@ int main(int argc, char *argv[])
 {
     struct timespec req={0},rem={0};
 	short connectionError = 0;
+	char i2cDataPrechecked[33];
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -80,8 +83,12 @@ int main(int argc, char *argv[])
 		while (connectionError >= 0){
 			
 			if(counter%200 == 0){
-				i2cReadStatus = read(i2cfile, recvBuf, 32);
-				TripleData();
+				i2cReadStatus = read(i2cfile, i2cDataPrechecked, 32);
+				if(CheckSumMatches(i2cDataPrechecked, 30)){
+					strncpy(recvBuf, i2cDataPrechecked, 30);
+					TripleData();
+				}
+				
 			}		
 			
 			connectionError = write(ServerFileNum, recvBuf, 96);
@@ -346,6 +353,24 @@ void updateLineCounter(){
 	recvBuf[66] = recvBuf[2];
 }
 
+
+bool CheckSumMatches(char* arrayToCheck, short dataLength){ //dataLength excludes the checksum byte which is the next byte
+	bool passesCheck = false;
+	short i;
+	if(strlen(arrayToCheck) == dataLength+1){
+		unsigned short summedAmount = 0;
+		for(i=0;i<dataLength;i++){
+			summedAmount += (unsigned char)arrayToCheck[i];
+		}
+		if(array[dataLength] == summedAmount%64){
+			passesCheck = true;
+		}
+	}
+	
+	return passesCheck
+}
+
+
 //SERVER STUFF. setting up socket
 void tryNewSocketConnection(){
 	
@@ -380,6 +405,7 @@ void tryNewSocketConnection(){
 	madeConnection = 1;
 }
 
+
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
@@ -402,6 +428,7 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
   //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
   return temp;
 }
+
 
 void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytesToCopy){
 
