@@ -72,7 +72,6 @@ char endLine[3] = {'E', 'N', 'D'};
 //char* CharsToSend = malloc(24);
 unsigned char* CharsToSend;// = "HELLO!!!!!!!!!!!!!!!!!!!!!!!!!!!";// malloc(32);
 unsigned char* writeTo=CharsToSend;
-
 unsigned char* writeArray=CharsToSend;
 unsigned char** wrPtr=&writeArray;
 
@@ -123,8 +122,8 @@ void loop() {
     
     updateCharsToSend();
     
-	  loloballoonLat = (unsigned long long) (balloonLat*1000000);
-	  loloballoonLon = (unsigned long long) (balloonLon*-1000000);
+	  loloballoonLat = (unsigned long) (balloonLat*100000);
+	  loloballoonLon = (unsigned long) (balloonLon*100000);
 	  longballoonAlt = (unsigned long) (balloonAlt*100);
 	  
 	  
@@ -196,20 +195,24 @@ void updateCharsToSend(){
 	writeTo=CharsToSend;
 
 	//Line counter-------------------------------------------
-	unsigned long intBuflineCount = 4567;
-	insertBytesFromInt(&intBuflineCount, &writeTo, 3);
+	unsigned int intBuflineCount = 4567;
+	insertBytesFromInt(&intBuflineCount, &writeTo, 2);
 
 	//Latitude * 10^5 positive only----------------should be 10^10-----------
 	//longBuflatitude = (unsigned long long)(balloonLat * 100000);
-	insertBytesFromInt(&loloballoonLat, &writeTo, 5);
+	insertBytesFromInt(&loloballoonLat, &writeTo, 3);
 
 	//Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
 	//longBuflongitude = (unsigned long long)(balloonLon * 100000);
-	insertBytesFromInt(&loloballoonLon, &writeTo, 5);
+	insertBytesFromInt(&loloballoonLon, &writeTo, 3);
 
 	//Altitude * 100--------------------------------------------
 	//long intBufaltitude = 1000 * 100;
 	insertBytesFromInt(&longballoonAlt, &writeTo, 3);
+	
+	//Time (seconds since UTC half day) --------------------------------------------
+	unsigned int intBuftemperature1 = 450;
+	insertBytesFromInt(&intBuftemperature1, &writeTo, 2);
 
 	//Thermistor count------------------------------------------
 	unsigned int intBuftemperature = 450;
@@ -217,6 +220,10 @@ void updateCharsToSend(){
 
 	//Battery Voltage---------------------------------------------
 	unsigned short intBufpressure = 120;
+	insertBytesFromInt(&intBufpressure, &writeTo, 1);
+	
+	//Battery Current---------------------------------------------
+	unsigned short intBufpressure = 140;
 	insertBytesFromInt(&intBufpressure, &writeTo, 1);
 
 	//Magnotometer X---------------------------------------------
@@ -237,15 +244,15 @@ void updateCharsToSend(){
 
 	//Pressure---------------------------------------------
 	unsigned long intBufpressure6 = 102300;
-	insertBytesFromInt(&intBufpressure6, &writeTo, 4);
+	insertBytesFromInt(&intBufpressure6, &writeTo, 3);
 
 	//Internal Temperature---------------------------------------------
 	unsigned int intBufpressure7 = 15;
 	insertBytesFromInt(&intBufpressure7, &writeTo, 2);
 
-	CharsToSend[29] = endLine[0];
-	CharsToSend[30] = endLine[1];
-	CharsToSend[31] = endLine[2];
+	CharsToSend[26] = endLine[0];
+	CharsToSend[27] = endLine[1];
+	CharsToSend[28] = endLine[2];
 }
 
 
@@ -321,30 +328,30 @@ bool feedgps() {
   return false;
 }
 
-//void initial(uint8_t address)
-//{
+// void initial(uint8_t address)
+// {
 // Serial.println();
 // Serial.println("PROM COEFFICIENTS ivan");
 // Wire.beginTransmission(address);
 // Wire.write(0x1E); // reset
 // Wire.endTransmission();
-//  
+ 
 // delay(10);
 // for (int i=0; i<6  ; i++) {
-//   Wire.beginTransmission(address);
-//   Wire.write(0xA2 + (i * 2));
-//   Wire.endTransmission();
-//   Wire.beginTransmission(address);
-//   Wire.requestFrom(address, (uint8_t) 6);
-//   delay(1);
-//   if(Wire.available())
-//   {
-//      C[i+1] = Wire.read() << 8 | Wire.read();
-//   }
-//   else {
-//     Serial.println("Error reading PROM 1"); // error reading the PROM or communicating with the device
-//   }
-//   Serial.println(C[i+1]);
+  // Wire.beginTransmission(address);
+  // Wire.write(0xA2 + (i * 2));
+  // Wire.endTransmission();
+  // Wire.beginTransmission(address);
+  // Wire.requestFrom(address, (uint8_t) 6);
+  // delay(1);
+  // if(Wire.available())
+  // {
+     // C[i+1] = Wire.read() << 8 | Wire.read();
+  // }
+  // else {
+    // Serial.println("Error reading PROM 1"); // error reading the PROM or communicating with the device
+  // }
+  // Serial.println(C[i+1]);
 // }
 // Serial.println();
-//}
+// }

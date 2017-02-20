@@ -24,7 +24,7 @@ int ServerFileNum;
 struct sockaddr_in serv_addr;
 unsigned short startingSocketNum; // = 5000;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
-short lineLength = 32;
+short lineLength = 29;
 char SocketNumFileData[5];
 FILE *SocketNumFile;
 
@@ -83,12 +83,12 @@ int main(int argc, char *argv[])
 	//char leftOvers[25];
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
-	char command[30];
+	char command[30] = "";
 	short offset;
 	
 	unsigned int DataLineCounter;
-	unsigned long DataGPS[3]; // Longitude, Latitude, Altitude
-	unsigned int DataSensors[8]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
+	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
+	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
 	char DataEndLine[3];
 	
 	while(1){ 
@@ -135,41 +135,47 @@ int main(int argc, char *argv[])
 						writeArray=recvBuff;
 						wrPtr=&writeArray;
 						
-						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,3);
+						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
 						printf("%d ", DataLineCounter); // Line Counter
 				  
-						DataGPS[0] = (unsigned long)getIntFromByte(wrPtr,5);
+						DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
 						printf("%lu ", DataGPS[0]); // Longitude
 				  
-						DataGPS[1] = (unsigned long)getIntFromByte(wrPtr,5);
+						DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
 						printf("%lu ", DataGPS[1]); // Latitude
 
 						DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
 						printf("%d ", DataGPS[2]); // Altitude
+						
+						DataGPS[3] = (unsigned int)getIntFromByte(wrPtr,2);
+						printf("%d ", DataGPS[3]); // Seconds since half UTC day
 
 						DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
 						printf("%d ", DataSensors[0]); // External Thermistor
 				  
 						DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
 						printf("%d ", DataSensors[1]); // Battery Voltage
-
+						
 						DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[2]); // Magnotometer X
+						printf("%d ", DataSensors[2]); // Battery Current
 
 						DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[3]); // Magnotometer Y
+						printf("%d ", DataSensors[3]); // Magnotometer X
 
 						DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[4]); // Magnotometer Z
+						printf("%d ", DataSensors[4]); // Magnotometer Y
 
 						DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[5]); // Humidity
+						printf("%d ", DataSensors[5]); // Magnotometer Z
 
-						DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,4);
-						printf("%d ", DataSensors[6]); // Pressure
+						DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,1);
+						printf("%d ", DataSensors[6]); // Humidity
 
-						DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,2);
-						printf("%d ", DataSensors[7]); // Internal Temperature
+						DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,3);
+						printf("%d ", DataSensors[7]); // Pressure
+
+						DataSensors[8] = (unsigned int)getIntFromByte(wrPtr,2);
+						printf("%d ", DataSensors[8]); // Internal Temperature
 						
 						DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
 						printf("%c", DataEndLine[0]); // 'E'
@@ -181,7 +187,10 @@ int main(int argc, char *argv[])
 						printf("%c\n", DataEndLine[2]); // 'D'
 						
 						// Send data over I2C
-						sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
+						//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
+						//write(i2cFile, command, strlen(command));
+						command[0] = '2';
+						strncat(command[1], recvBuff[2], 9);
 						write(i2cFile, command, strlen(command));
 					}
 					

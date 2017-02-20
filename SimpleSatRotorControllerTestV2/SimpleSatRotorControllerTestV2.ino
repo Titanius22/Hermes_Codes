@@ -317,13 +317,12 @@ void loop()
          //Serial.println(analogRead(_azimuthInputPin));
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-			while(true){//if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 				//unsigned long FirstNum, el; 
 				//unsigned long long lat, lon; 
 				
 				
-				/*
 				char CommandChar;
 				Command1inBinary = "";
 				Command2inBinary = "";
@@ -350,11 +349,11 @@ void loop()
 						}
 						switch(CommandChar){
 							case '1':{ // Changes GS GPS
-								Command1inBinary =+ Wire.read();
+								Command1inBinary[i] = Wire.read();
 								break;
 							} 
 							case '2':{ // Changes Balloon GPS
-								Command2inBinary =+ Wire.read();
+								Command2inBinary[i] = Wire.read();
 								break;
 							} 
 							case '3':{ //Asks for Az and El
@@ -365,42 +364,42 @@ void loop()
 						i++;
 					}while(i < loopComand)
 				}
-				*/
-				unsigned long returnedData[3]; //Longintude, Latitude, Altitude
-				char CharsToSend[11];
-
-				char *writeTo=CharsToSend;
-        unsigned long longBuflatitude;
-        unsigned long longBuflongitude;
-        unsigned int intBufaltitude;
-
-				//Latitude * 10^5 positive only----------------should be 10^10-----------
-				longBuflatitude = (unsigned long)(29.85782 * 100000);
-				insertBytesFromInt(longBuflatitude, &writeTo, 4);
-
-				//Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
-				longBuflongitude = (unsigned long)(45.26487 * 100000);
-				insertBytesFromInt(longBuflongitude, &writeTo, 4);
-
-				//Altitude * 100--------------------------------------------
-				intBufaltitude = 489 * 100;
-				insertBytesFromInt(intBufaltitude, &writeTo, 3);
 				
-				Command2inBinary = String(CharsToSend);
+				// unsigned long returnedData[3]; //Longintude, Latitude, Altitude
+				// char CharsToSend[11];
+
+				// char *writeTo=CharsToSend;
+				// unsigned long longBuflatitude;
+				// unsigned long longBuflongitude;
+				// unsigned int intBufaltitude;
+
+				////Latitude * 10^5 positive only----------------should be 10^10-----------
+				// longBuflatitude = (unsigned long)(29.85782 * 100000);
+				// insertBytesFromInt(longBuflatitude, &writeTo, 4);
+
+				////Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
+				// longBuflongitude = (unsigned long)(45.26487 * 100000);
+				// insertBytesFromInt(longBuflongitude, &writeTo, 4);
+
+				////Altitude * 100--------------------------------------------
+				// intBufaltitude = 489 * 100;
+				// insertBytesFromInt(intBufaltitude, &writeTo, 3);
+				
+				// Command2inBinary = String(CharsToSend);
 
 				if(Command1inBinary.length() != 0){
 					convertBinaryCommands(Command1inBinary, Command1Length, RecievedDataArray);
 					groundStationlat = ((float)RecievedDataArray[0])/100000;
 					groundStationlon = ((float)RecievedDataArray[1])/100000;
 					//groundStationAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles 	
-          groundStationAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles   		
+					groundStationAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles   		
 				}
 				if(Command2inBinary.length() != 0){
 					convertBinaryCommands(Command2inBinary, Command2Length, RecievedDataArray);
 					balloonLat = ((float)RecievedDataArray[0])/100000;
 					balloonLon = ((float)RecievedDataArray[1])/100000;
 					//balloonAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles
-          balloonAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles 
+					balloonAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles 
 				}
 				if(Command3){
 					/////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -418,7 +417,7 @@ void loop()
 				Serial.print("balloonAlt: ");
 				Serial.println(balloonAlt);
 
-       delay(1000);
+				delay(1000);
 
 			}
 
@@ -805,7 +804,7 @@ void convertBinaryCommands(String strBinaryCommand, short len, unsigned long ret
 	
 	char* writeArray=buf;
 	char** wrPtr=&writeArray;
-	returnedData[0] = (unsigned long)getIntFromByte(wrPtr,4);
-	returnedData[1] = (unsigned long)getIntFromByte(wrPtr,4);
+	returnedData[0] = (unsigned long)getIntFromByte(wrPtr,3);
+	returnedData[1] = (unsigned long)getIntFromByte(wrPtr,3);
 	returnedData[2] = (unsigned long)getIntFromByte(wrPtr,3);
 }
