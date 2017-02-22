@@ -204,13 +204,14 @@ String elRotorMovement;   // string for el rotor move display
 char ch;
 int valueindex;
 String temp = "";
-String Command1inBinary;
-short Command1Length = 12; //Excludes command number char itself
-String Command2inBinary;
-short Command2Length = 12; //Excludes command number char itself
+char Command1inBinary[10];
+short Command1Length = 9; //Excludes command number char itself
+char Command2inBinary[10];
+short Command2Length = 9; //Excludes command number char itself
 bool Command3;
 short Command3Length = 1;
 unsigned long RecievedDataArray[3];
+unsigned short loopCommand;
 int j;
 
 //
@@ -248,7 +249,7 @@ void setup()
     // initialize i2c as slave
     Wire.begin(SLAVE_ADDRESS);
     // define callbacks for i2c communication
-    //Wire.onReceive(receiveData);
+    Wire.onReceive(receiveData);
     //Wire.onRequest(sendData);
 }
 
@@ -311,38 +312,40 @@ void loop()
 			Serial.print("(volt)EL Voltage Read : ");
 			Serial.println(((float)analogRead(_elevationInputPin)*5/1024),6);
 
-         //Serial.print("EL raw Read: ");
-         //Serial.println(analogRead(_elevationInputPin));
-         //Serial.print("AZ raw Read: ");
-         //Serial.println(analogRead(_azimuthInputPin));
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-			if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+			//Serial.print("EL raw Read: ");
+			//Serial.println(analogRead(_elevationInputPin));
+			//Serial.print("AZ raw Read: ");
+			//Serial.println(analogRead(_azimuthInputPin));
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+			if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        
 				//unsigned long FirstNum, el; 
 				//unsigned long long lat, lon; 
-				
-				
+        
 				char CommandChar;
-				Command1inBinary = "";
-				Command2inBinary = "";
+				Command1inBinary[0] = '\0';
+				Command2inBinary[0] = '\0';
 				Command3 = false;
 				while(Wire.available()) {
 					i = 0;
 					do{
 						if(i == 0){
 							CommandChar = Wire.read();
+							Serial.println(CommandChar);
 							switch(CommandChar){
 								case '1':{ // Changes GS GPS
-									loopComand = Command1Length;
+									loopCommand = Command1Length;
+									Serial.println("case 1a");
 									break;
 								} 
 								case '2':{ // Changes Balloon GPS
-									loopComand = Command2Length;
+									loopCommand = Command2Length;
+									Serial.println("case 2a");
 									break;
 								} 
 								case '3':{ //Asks for Az and El
-									loopComand = Command3Length;
+									loopCommand = Command3Length;
+									Serial.println("case 3a");
 									break;
 								}
 							}
@@ -350,19 +353,22 @@ void loop()
 						switch(CommandChar){
 							case '1':{ // Changes GS GPS
 								Command1inBinary[i] = Wire.read();
+								Serial.println("case 1b");
 								break;
 							} 
 							case '2':{ // Changes Balloon GPS
 								Command2inBinary[i] = Wire.read();
+								Serial.println("case 2b");
 								break;
 							} 
 							case '3':{ //Asks for Az and El
 								Command3 = true;
+								Serial.println("case 3b");
 								break;
 							}
 						}
 						i++;
-					}while(i < loopComand)
+					}while(i < loopCommand);
 				}
 				
 				// unsigned long returnedData[3]; //Longintude, Latitude, Altitude
@@ -386,15 +392,14 @@ void loop()
 				// insertBytesFromInt(intBufaltitude, &writeTo, 3);
 				
 				// Command2inBinary = String(CharsToSend);
-
-				if(Command1inBinary.length() != 0){
+				if(Command1inBinary[0] != '\0'){
 					convertBinaryCommands(Command1inBinary, Command1Length, RecievedDataArray);
 					groundStationlat = ((float)RecievedDataArray[0])/100000;
 					groundStationlon = ((float)RecievedDataArray[1])/100000;
 					//groundStationAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles 	
 					groundStationAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles   		
 				}
-				if(Command2inBinary.length() != 0){
+				if(Command2inBinary[0] != '\0'){
 					convertBinaryCommands(Command2inBinary, Command2Length, RecievedDataArray);
 					balloonLat = ((float)RecievedDataArray[0])/100000;
 					balloonLon = ((float)RecievedDataArray[1])/100000;
@@ -698,6 +703,9 @@ void processAzElNumeric(char character)
            // should never get here
         }         
     } 
+}
+
+void receiveData(){
 }
 
 
