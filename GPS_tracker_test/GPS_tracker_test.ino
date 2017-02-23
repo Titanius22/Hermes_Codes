@@ -76,6 +76,7 @@ unsigned char* writeArray=CharsToSend;
 unsigned char** wrPtr=&writeArray;
 
 bool newdata = false;
+unsigned short LineLength = 29; //excludes checksum byte
 
 void setup() {
   // for communication with Pi
@@ -175,7 +176,7 @@ void requestEvent() {
   //lineCount++;
   //updateCharsToSend();
 
-  Wire.write(CharsToSend,32); // respond with message of 32 byte
+  Wire.write(CharsToSend, 30); // respond with message of 32 byte
   //Wire.write("W", 1); // respond with message of 32 byte
   
   //updateCharsToSend();
@@ -191,8 +192,10 @@ void requestEvent() {
 //char* updateCharsToSend(){
 void updateCharsToSend(){
 	free(CharsToSend);
-	CharsToSend = malloc(32);
+	CharsToSend = malloc(LineLength+1);
 	writeTo=CharsToSend;
+	unsigned int sum = 0;
+	short i;
 
 	//Line counter-------------------------------------------
 	unsigned int intBuflineCount = 4567;
@@ -223,8 +226,8 @@ void updateCharsToSend(){
 	insertBytesFromInt(&intBufpressure, &writeTo, 1);
 	
 	//Battery Current---------------------------------------------
-	unsigned short intBufpressure = 140;
-	insertBytesFromInt(&intBufpressure, &writeTo, 1);
+	unsigned short intBufpressure12 = 140;
+	insertBytesFromInt(&intBufpressure12, &writeTo, 1);
 
 	//Magnotometer X---------------------------------------------
 	unsigned short intBufpressure2 = 80;
@@ -250,9 +253,14 @@ void updateCharsToSend(){
 	unsigned int intBufpressure7 = 15;
 	insertBytesFromInt(&intBufpressure7, &writeTo, 2);
 
-	CharsToSend[26] = endLine[0];
-	CharsToSend[27] = endLine[1];
-	CharsToSend[28] = endLine[2];
+	CharsToSend[LineLength-3] = endLine[0];
+	CharsToSend[LineLength-2] = endLine[1];
+	CharsToSend[LineLength-1] = endLine[2];
+	
+	for(i=0;i<LineLength;i++){
+		sum += (unsigned char)CharsToSend[i];
+	}
+	CharsToSend[LineLength] = (sum%64);
 }
 
 
