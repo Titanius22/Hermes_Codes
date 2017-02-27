@@ -121,84 +121,87 @@ int main(int argc, char *argv[])
 				}
 				
 				
-				recvBuff[n] = 0;
+				if(fileLineCound % 300){
+					
+				}
 				
 				
 				// Every 20 lines
-				if(fileLineCount == 200){
+				if(fileLineCound > 1000){
+					if(totalCount%LineLength==0 && n%LineLength==0){
+						//offset = findOffset(recvBuff, n, lineLength);
+						
+						//if(offset >= 0){
+						if(recvBuff[lineLength-3] == 'E'){
+							//writeArray=recvBuff[offset];
+							writeArray=recvBuff;
+							wrPtr=&writeArray;
+							
+							DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
+							printf("%d ", DataLineCounter); // Line Counter
+					  
+							DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
+							printf("%lu ", DataGPS[0]); // Longitude
+					  
+							DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
+							printf("%lu ", DataGPS[1]); // Latitude
+
+							DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
+							printf("%d ", DataGPS[2]); // Altitude
+							
+							DataGPS[3] = (unsigned int)getIntFromByte(wrPtr,2);
+							printf("%d ", DataGPS[3]); // Seconds since half UTC day
+
+							DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
+							printf("%d ", DataSensors[0]); // External Thermistor
+					  
+							DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
+							printf("%d ", DataSensors[1]); // Battery Voltage
+							
+							DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
+							printf("%d ", DataSensors[2]); // Battery Current
+
+							DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
+							printf("%d ", DataSensors[3]); // Magnotometer X
+
+							DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
+							printf("%d ", DataSensors[4]); // Magnotometer Y
+
+							DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
+							printf("%d ", DataSensors[5]); // Magnotometer Z
+
+							DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,1);
+							printf("%d ", DataSensors[6]); // Humidity
+
+							DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,3);
+							printf("%d ", DataSensors[7]); // Pressure
+
+							DataSensors[8] = (unsigned int)getIntFromByte(wrPtr,2);
+							printf("%d ", DataSensors[8]); // Internal Temperature
+							
+							DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
+							printf("%c", DataEndLine[0]); // 'E'
+
+							DataEndLine[1] = (char)getIntFromByte(wrPtr,1);
+							printf("%c", DataEndLine[1]); // 'N'
+
+							DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
+							printf("%c\n", DataEndLine[2]); // 'D'
+							
+							// Send data over I2C
+							//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
+							//write(i2cFile, command, strlen(command));
+							command[0] = '2';
+							strncat(command+1, recvBuff+2, 9);
+							write(i2cFile, command, strlen(command));
+						}
 					
-					//offset = findOffset(recvBuff, n, lineLength);
-					
-					//if(offset >= 0){
-					if(recvBuff[29] == 'E'){
-						//writeArray=recvBuff[offset];
-						writeArray=recvBuff;
-						wrPtr=&writeArray;
-						
-						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
-						printf("%d ", DataLineCounter); // Line Counter
-				  
-						DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%lu ", DataGPS[0]); // Longitude
-				  
-						DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%lu ", DataGPS[1]); // Latitude
-
-						DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%d ", DataGPS[2]); // Altitude
-						
-						DataGPS[3] = (unsigned int)getIntFromByte(wrPtr,2);
-						printf("%d ", DataGPS[3]); // Seconds since half UTC day
-
-						DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
-						printf("%d ", DataSensors[0]); // External Thermistor
-				  
-						DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[1]); // Battery Voltage
-						
-						DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[2]); // Battery Current
-
-						DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[3]); // Magnotometer X
-
-						DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[4]); // Magnotometer Y
-
-						DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[5]); // Magnotometer Z
-
-						DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[6]); // Humidity
-
-						DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%d ", DataSensors[7]); // Pressure
-
-						DataSensors[8] = (unsigned int)getIntFromByte(wrPtr,2);
-						printf("%d ", DataSensors[8]); // Internal Temperature
-						
-						DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
-						printf("%c", DataEndLine[0]); // 'E'
-
-						DataEndLine[1] = (char)getIntFromByte(wrPtr,1);
-						printf("%c", DataEndLine[1]); // 'N'
-
-						DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
-						printf("%c\n", DataEndLine[2]); // 'D'
-						
-						// Send data over I2C
-						//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
-						//write(i2cFile, command, strlen(command));
-						command[0] = '2';
-						strncat(command[1], recvBuff[2], 9);
-						write(i2cFile, command, strlen(command));
+						// File tracking and counting
+						fileLineCount = 0;
+						fileCount++;
+						fclose(filePointer);
+						filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 					}
-					
-					// File tracking and counting
-					fileLineCount = 0;
-					fileCount++;
-					fclose(filePointer);
-					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 				}
 				fileLineCount++;
 			}
