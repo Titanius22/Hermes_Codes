@@ -18,7 +18,7 @@
 unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
 void tryNewSocketConnection();
-void SetNewData();
+void SetNewData(short);
 void TripleData();
 void updateLineCounter();
 bool CheckSumMatches(char* , short);
@@ -178,8 +178,7 @@ void SetNewData(short pick){
 	unsigned char* writeTo=recvBuf;
 	
 	//Line counter-------------------------------------------
-	int intBuflineCount = 150;
-	insertBytesFromInt(&intBuflineCount, &writeTo, 2);
+	insertBytesFromInt(&counter, &writeTo, 2);
 
 	//Latitude
 	unsigned int intBuflatitude[12];
@@ -225,7 +224,7 @@ void SetNewData(short pick){
 	
 
 	//Altitude (meters) * 100 --------------------------------------------
-	unsigned int intBufaltitude[12] = ;
+	unsigned int intBufaltitude[24];
 	intBufaltitude[0] = (unsigned int)(0 * 100);
 	intBufaltitude[1] = (unsigned int)(1521.73 * 100);
 	intBufaltitude[2] = (unsigned int)(3043.47 * 100);

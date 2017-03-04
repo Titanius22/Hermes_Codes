@@ -37,7 +37,8 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 
 int main(int argc, char *argv[])
 {
-    char recvBuff[100];
+    unsigned short NumColRecvBuffArray = 55;
+	char recvBuff[NumColRecvBuffArray][87]; // (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
 	int n = 0;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
@@ -76,15 +77,18 @@ int main(int argc, char *argv[])
 	int fileLineCount = 1;
 	char fileCounter[8];
 	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
-	char fileName[] = "DistanceTest";
+	char fileName[] = "DistanceTestFULLER";
 	char fileExt[] = ".txt";
 	char fullFilePath[80];
+	//char fullFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL.txt";;
 	FILE *filePointer;
 	//char leftOvers[25];
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
 	char command[30] = "";
 	short offset;
+	unsigned short CounterRecvBuffArray = 0;
+	
 	
 	unsigned int DataLineCounter;
 	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
@@ -98,8 +102,9 @@ int main(int argc, char *argv[])
 		
 		
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
-			while ( (n = read(ServerFileNum, recvBuff, lineLength*3)) > 0) 
+			while ((n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], lineLength*3)) > 0) 
 			{
+				CounterRecvBuffArray++;
 				
 				// At the start of every new "page", it creates and opens a new file
 				if (filePointer == NULL){
@@ -119,11 +124,8 @@ int main(int argc, char *argv[])
 				{
 					fwrite(recvBuff, n, 1, filePointer);
 				}
+
 				
-				
-				if(fileLineCound % 300){
-					
-				}
 				
 				
 				// Every 20 lines
@@ -235,7 +237,7 @@ the function will return 10.
 potential recvArray to be sent into the function: 3456789END123456789EN
 the function will return -1 because a complete string of 123456789END can't be achieved.
 */
-short findOffset(char recvArray[], short lengthOfArray, short lengthOfLine){
+short findOffset(char* recvArray, short lengthOfArray, short lengthOfLine){
 	short result = -1;
 	short i;
 	
