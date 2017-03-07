@@ -38,8 +38,8 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 int main(int argc, char *argv[])
 {
     unsigned short NumColRecvBuffArray = 55;
-	char recvBuff[NumColRecvBuffArray][87]; // (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
-	int n = 0;
+	char recvBuff[NumColRecvBuffArray][88]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
+	unsigned char n = 0;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 
@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
 	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 
+	unsigned short i = 0;
 	int fileCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
@@ -82,6 +83,8 @@ int main(int argc, char *argv[])
 	char fullFilePath[80];
 	//char fullFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL.txt";;
 	FILE *filePointer;
+	unsigned short newFileRate = 15*60; // number of seconds before data saving switches to a new file.
+	unsigned short dataToMountRate = 2; // number of seconds between data sent to mount
 	//char leftOvers[25];
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
@@ -94,6 +97,11 @@ int main(int argc, char *argv[])
 	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
 	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
 	char DataEndLine[3];
+	time_t epochTimeSecondsFile = time(0);
+	time_t epochTimeSecondsTracking = time(0);
+	time_t bufEpoch;
+	unsigned short nElementIndex = ((lineLength*3)+1)-1;
+	unsigned char createNewFile = 1; // 1 yes, 0 no
 	
 	while(1){ 
 		
@@ -103,11 +111,11 @@ int main(int argc, char *argv[])
 		
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
 			while ((n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], lineLength*3)) > 0) 
-			{
-				CounterRecvBuffArray++;
+			{				
+				recvBuff[CounterRecvBuffArray][nElementIndex] = n; //saves n to the element after the data
 				
 				// At the start of every new "page", it creates and opens a new file
-				if (filePointer == NULL){
+				if (createNewFile == 1){
 					sprintf(fileCounter, "%04d", fileCount);
 				
 					strcpy(fullFilePath, filepath);
@@ -115,101 +123,111 @@ int main(int argc, char *argv[])
 					//strcpy(fullFilePath, mostFilePath);
 					strcat(fullFilePath, fileCounter);
 					strcat(fullFilePath, fileExt);
-					
-					filePointer = fopen(fullFilePath, "a");
+					createNewFile = 0;
 				}
 				
 				// Writes data to the document unconverted
-				if (filePointer != NULL)
+				if (filePointer != NULL && (CounterRecvBuffArray == (NumColRecvBuffArray-1)))
 				{
-					fwrite(recvBuff, n, 1, filePointer);
+					filePointer = fopen(fullFilePath, "a");
+					for (i=0; i<NumColRecvBuffArray; i++){
+						fwrite(recvBuff[i], recvBuff[i][nElementIndex], 1, filePointer);
+					}
+					fclose(filePointer);
 				}
-
-				
-				
 				
 				// Every 20 lines
-				if(fileLineCound > 1000){
-					if(totalCount%LineLength==0 && n%LineLength==0){
-						//offset = findOffset(recvBuff, n, lineLength);
-						
-						//if(offset >= 0){
-						if(recvBuff[lineLength-3] == 'E'){
-							//writeArray=recvBuff[offset];
-							writeArray=recvBuff;
-							wrPtr=&writeArray;
-							
-							DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
-							printf("%d ", DataLineCounter); // Line Counter
-					  
-							DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%lu ", DataGPS[0]); // Longitude
-					  
-							DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%lu ", DataGPS[1]); // Latitude
-
-							DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%d ", DataGPS[2]); // Altitude
-							
-							DataGPS[3] = (unsigned int)getIntFromByte(wrPtr,2);
-							printf("%d ", DataGPS[3]); // Seconds since half UTC day
-
-							DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
-							printf("%d ", DataSensors[0]); // External Thermistor
-					  
-							DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[1]); // Battery Voltage
-							
-							DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[2]); // Battery Current
-
-							DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[3]); // Magnotometer X
-
-							DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[4]); // Magnotometer Y
-
-							DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[5]); // Magnotometer Z
-
-							DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[6]); // Humidity
-
-							DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%d ", DataSensors[7]); // Pressure
-
-							DataSensors[8] = (unsigned int)getIntFromByte(wrPtr,2);
-							printf("%d ", DataSensors[8]); // Internal Temperature
-							
-							DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
-							printf("%c", DataEndLine[0]); // 'E'
-
-							DataEndLine[1] = (char)getIntFromByte(wrPtr,1);
-							printf("%c", DataEndLine[1]); // 'N'
-
-							DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
-							printf("%c\n", DataEndLine[2]); // 'D'
-							
-							// Send data over I2C
-							//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
-							//write(i2cFile, command, strlen(command));
-							command[0] = '2';
-							strncat(command+1, recvBuff+2, 9);
-							write(i2cFile, command, strlen(command));
-						}
+				bufEpoch = time(0);
+				if(bufEpoch > (epochTimeSecondsTracking + dataToMountRate)){
+					epochTimeSecondsTracking = bufEpoch;
+					//offset = findOffset(recvBuff, n, lineLength);
 					
-						// File tracking and counting
-						fileLineCount = 0;
-						fileCount++;
-						fclose(filePointer);
-						filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+					//if(offset >= 0){
+					if(recvBuff[lineLength-3] == 'E'){
+						//writeArray=recvBuff[offset];
+						writeArray=recvBuff;
+						wrPtr=&writeArray;
+						
+						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
+						printf("%d ", DataLineCounter); // Line Counter
+				  
+						DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
+						printf("%lu ", DataGPS[0]); // Longitude
+				  
+						DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
+						printf("%lu ", DataGPS[1]); // Latitude
+
+						DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
+						printf("%d ", DataGPS[2]); // Altitude
+						
+						DataGPS[3] = (unsigned int)getIntFromByte(wrPtr,2);
+						printf("%d ", DataGPS[3]); // Seconds since half UTC day
+
+						DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
+						printf("%d ", DataSensors[0]); // External Thermistor
+				  
+						DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
+						printf("%d ", DataSensors[1]); // Battery Voltage
+						
+						DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
+						printf("%d ", DataSensors[2]); // Battery Current
+
+						DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
+						printf("%d ", DataSensors[3]); // Magnotometer X
+
+						DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
+						printf("%d ", DataSensors[4]); // Magnotometer Y
+
+						DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
+						printf("%d ", DataSensors[5]); // Magnotometer Z
+
+						DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,1);
+						printf("%d ", DataSensors[6]); // Humidity
+
+						DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,3);
+						printf("%d ", DataSensors[7]); // Pressure
+
+						DataSensors[8] = (unsigned int)getIntFromByte(wrPtr,2);
+						printf("%d ", DataSensors[8]); // Internal Temperature
+						
+						DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
+						printf("%c", DataEndLine[0]); // 'E'
+
+						DataEndLine[1] = (char)getIntFromByte(wrPtr,1);
+						printf("%c", DataEndLine[1]); // 'N'
+
+						DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
+						printf("%c\n", DataEndLine[2]); // 'D'
+						
+						// Send data over I2C
+						//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
+						//write(i2cFile, command, strlen(command));
+						command[0] = '2';
+						strncat(command+1, recvBuff+2, 9);
+						write(i2cFile, command, strlen(command));
 					}
 				}
+				
+				bufEpoch = time(0);
+				if(bufEpoch > (epochTimeSecondsFile + newFileRate)){
+					epochTimeSecondsFile = bufEpoch;
+					
+					// File tracking and counting
+					fileLineCount = 0;
+					fileCount++;
+					fclose(filePointer);
+					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+					createNewFile = 1;
+				}		
+				
 				fileLineCount++;
+				CounterRecvBuffArray++;
 			}
+			
 			if(filePointer!=NULL){
 				fclose(filePointer);
 				filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+				createNewFile = 1;
 			}
 
 		}

@@ -85,7 +85,9 @@ int main(int argc, char *argv[])
 		connectionError = 0;
 		while (connectionError >= 0){
 			
+			
 			if(counter%200 == 0){
+				/*
 				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 				if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
 					strncpy(recvBuf, i2cDataPrechecked, dataLineLength);
@@ -94,6 +96,7 @@ int main(int argc, char *argv[])
 				else{
 					printf("i2cData dropped");
 				}
+				*/
 				
 				if(counter%1400 == 0){
 					GPSLocCounter++;
@@ -104,6 +107,7 @@ int main(int argc, char *argv[])
 					SetNewData(GPSLocCounter);
 				}
 			}
+			
 			
 			//send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
 			connectionError = send(ServerFileNum, recvBuf, dataLineLength*3, MSG_NOSIGNAL); 
