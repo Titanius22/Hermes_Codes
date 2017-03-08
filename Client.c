@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	int fileCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
-	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
+	const char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
 	char fileName[] = "DistanceTestFULLER";
 	char fileExt[] = ".txt";
 	char fullFilePath[80];
@@ -141,10 +141,10 @@ int main(int argc, char *argv[])
 						printf("%d ", DataLineCounter); // Line Counter
 				  
 						DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%lu ", DataGPS[0]); // Longitude
+						printf("%d ", DataGPS[0]); // Longitude
 				  
 						DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%lu ", DataGPS[1]); // Latitude
+						printf("%d ", DataGPS[1]); // Latitude
 
 						DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
 						printf("%d ", DataGPS[2]); // Altitude
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 				}
 				
 				// Writes data to the document unconverted
-				if (filePointer != NULL && (CounterRecvBuffArray == (NumColRecvBuffArray-1)))
+				if (createNewFile == 0 && (CounterRecvBuffArray == (NumColRecvBuffArray-1)))
 				{
 					filePointer = fopen(fullFilePath, "a");
 					for (i=0; i<NumColRecvBuffArray; i++){
@@ -206,20 +206,25 @@ int main(int argc, char *argv[])
 					}
 					CounterRecvBuffArray = 0;
 					fclose(filePointer);
+					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 				}else{
 					CounterRecvBuffArray++;
 				}
 				
-				bufEpoch = time(0);
-				if(bufEpoch > (epochTimeSecondsFile + newFileRate)){
-					epochTimeSecondsFile = bufEpoch;
+				
+				if(createNewFile == 0){
 					
-					// File tracking and counting
-					fileLineCount = 0;
-					fileCount++;
-					fclose(filePointer);
-					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
-					createNewFile = 1;
+					bufEpoch = time(0);
+					if(bufEpoch > (epochTimeSecondsFile + newFileRate)){
+						epochTimeSecondsFile = bufEpoch;
+						
+						// File tracking and counting
+						fileLineCount = 0;
+						fileCount++;
+						fclose(filePointer);
+						filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+						createNewFile = 1;
+					}
 				}
 				
 				fileLineCount++;
@@ -304,10 +309,10 @@ int tryNewSocketConnection(){
 	// The arv[1] was originally the first trminal argument which was the ip address
 	//if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
 	if(inet_pton(AF_INET, "10.1.1.232", &serv_addr.sin_addr)<=0)
-    {
-        printf("\n inet_pton error occured\n");
-        return -1;
-    }
+	{
+		printf("\n inet_pton error occured\n");
+		return -1;
+	}
 	
 	if(connect(ServerFileNum, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{

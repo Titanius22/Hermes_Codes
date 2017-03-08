@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 			}
 			*/
 			
-			if(counter%2000){
+			if(counter%2000 == 0){
 				testNum++;
 				SetNewData(testNum%23);
 			}
