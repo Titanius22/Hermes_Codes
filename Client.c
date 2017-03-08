@@ -13,6 +13,12 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
+#define N_ELEMENT_INDEX 87
+#define NEW_FILE_RATE 900 // number of seconds before data saving switches to a new file.
+#define DATA_TO_MOUNT_RATE 2 // number of seconds between data sent to mount
+#define LINE_LENGTH lineLength 29
+#define NUM_COL_RECV_BUFF_ARRAY 55
+
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* , unsigned char** , short);
@@ -24,7 +30,6 @@ int ServerFileNum;
 struct sockaddr_in serv_addr;
 unsigned short startingSocketNum; // = 5000;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
-short lineLength = 29;
 char SocketNumFileData[5];
 FILE *SocketNumFile;
 
@@ -37,8 +42,7 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 
 int main(int argc, char *argv[])
 {
-    unsigned short NumColRecvBuffArray = 55;
-	char recvBuff[NumColRecvBuffArray][88]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
+	char recvBuff[NUM_COL_RECV_BUFF_ARRAY][88]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
 	unsigned char n = 0;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
@@ -83,9 +87,6 @@ int main(int argc, char *argv[])
 	char fullFilePath[80];
 	//char fullFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL.txt";;
 	FILE *filePointer;
-	unsigned short newFileRate = 15*60; // number of seconds before data saving switches to a new file.
-	unsigned short dataToMountRate = 2; // number of seconds between data sent to mount
-	//char leftOvers[25];
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
 	char command[30] = "";
@@ -99,7 +100,6 @@ int main(int argc, char *argv[])
 	time_t epochTimeSecondsFile = time(0);
 	time_t epochTimeSecondsTracking = time(0);
 	time_t bufEpoch;
-	unsigned short nElementIndex = ((lineLength*3)+1)-1;
 	unsigned char createNewFile = 1; // 1 yes, 0 no
 	
 	while(1){ 
@@ -109,9 +109,9 @@ int main(int argc, char *argv[])
 		
 		
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
-			while ((n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], lineLength*3)) > 0) 
+			while ((n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], LINE_LENGTH*3)) > 0) 
 			{				
-				recvBuff[CounterRecvBuffArray][nElementIndex] = n; //saves n to the element after the data
+				recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
 				
 				// At the start of every new "page", it creates and opens a new file
 				if (createNewFile == 1){
@@ -128,9 +128,9 @@ int main(int argc, char *argv[])
 				
 				// Every 20 lines
 				bufEpoch = time(0);
-				if(bufEpoch > (epochTimeSecondsTracking + dataToMountRate)){
+				if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
 					epochTimeSecondsTracking = bufEpoch;
-					offset = findOffset(recvBuff[CounterRecvBuffArray], n, lineLength);
+					offset = findOffset(recvBuff[CounterRecvBuffArray], n, LINE_LENGTH);
 					
 					//if(offset >= 0){
 					if(offset >= 0){
@@ -199,11 +199,11 @@ int main(int argc, char *argv[])
 				}
 				
 				// Writes data to the document unconverted
-				if (createNewFile == 0 && (CounterRecvBuffArray == (NumColRecvBuffArray-1)))
+				if (createNewFile == 0 && (CounterRecvBuffArray == ( NUM_COL_RECV_BUFF_ARRAY -1)))
 				{
 					//filePointer = fopen(fullFilePath, "a");
-					for (i=0; i<NumColRecvBuffArray; i++){
-						fwrite(recvBuff[i], recvBuff[i][nElementIndex], 1, filePointer);
+					for (i=0; i< NUM_COL_RECV_BUFF_ARRAY ; i++){
+						fwrite(recvBuff[i], recvBuff[i][ N_ELEMENT_INDEX ], 1, filePointer);
 					}
 					fflush(filePointer);
 					CounterRecvBuffArray = 0;
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 				if(createNewFile == 0){
 					
 					bufEpoch = time(0);
-					if(bufEpoch > (epochTimeSecondsFile + newFileRate)){
+					if(bufEpoch > (epochTimeSecondsFile + NEW_FILE_RATE)){
 						epochTimeSecondsFile = bufEpoch;
 						
 						// File tracking and counting
