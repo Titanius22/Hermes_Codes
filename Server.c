@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 		while (connectionError >= 0){
 			
 			
-			if(counter%200 == 0){
+			if(counter%700 == 0){
 				/*
 				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 				if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
@@ -153,13 +153,7 @@ int main(int argc, char *argv[])
 
 				printf("%c\n", (char)getIntFromByte(wrPtr,1));
 			}
-			*/
-			
-			if(counter%2000 == 0){
-				testNum++;
-				SetNewData(testNum%23);
-			}
-			
+			*/	
 			
 		
 			//printf("%s\n", buf);

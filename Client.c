@@ -13,10 +13,10 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#define N_ELEMENT_INDEX 87
-#define NEW_FILE_RATE 900 // number of seconds before data saving switches to a new file.
-#define DATA_TO_MOUNT_RATE 2 // number of seconds between data sent to mount
-#define LINE_LENGTH lineLength 29
+#define N_ELEMENT_INDEX 87 // 3*29 bytes
+#define NEW_FILE_RATE 900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
+#define DATA_TO_MOUNT_RATE 4 // number of seconds between data sent to mount
+#define LINE_LENGTH 29
 #define NUM_COL_RECV_BUFF_ARRAY 55
 
 //prototyping
@@ -109,9 +109,13 @@ int main(int argc, char *argv[])
 		
 		
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
-			while ((n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], LINE_LENGTH*3)) > 0) 
+			while (n > 0) 
 			{				
-				recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
+				while (n > 0 && (CounterRecvBuffArray == ( NUM_COL_RECV_BUFF_ARRAY -1))){		
+					n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], LINE_LENGTH*3)
+					recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
+					CounterRecvBuffArray++;
+				}
 				
 				// At the start of every new "page", it creates and opens a new file
 				if (createNewFile == 1){
@@ -199,20 +203,17 @@ int main(int argc, char *argv[])
 				}
 				
 				// Writes data to the document unconverted
-				if (createNewFile == 0 && (CounterRecvBuffArray == ( NUM_COL_RECV_BUFF_ARRAY -1)))
-				{
+				//if (createNewFile == 0 && (CounterRecvBuffArray == ( NUM_COL_RECV_BUFF_ARRAY -1)))
+				if (createNewFile == 0){
 					//filePointer = fopen(fullFilePath, "a");
-					for (i=0; i< NUM_COL_RECV_BUFF_ARRAY ; i++){
+					for (i=0; i< CounterRecvBuffArray ; i++){
 						fwrite(recvBuff[i], recvBuff[i][ N_ELEMENT_INDEX ], 1, filePointer);
 					}
 					fflush(filePointer);
 					CounterRecvBuffArray = 0;
 					//fclose(filePointer);
 					//filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
-				}else{
-					CounterRecvBuffArray++;
-				}
-				
+				}				
 				
 				if(createNewFile == 0){
 					
