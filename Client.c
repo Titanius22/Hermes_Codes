@@ -92,7 +92,6 @@ int main(int argc, char *argv[])
 	short offset;
 	unsigned short CounterRecvBuffArray = 0;
 	
-	
 	unsigned int DataLineCounter;
 	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
 	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
@@ -126,26 +125,16 @@ int main(int argc, char *argv[])
 					createNewFile = 0;
 				}
 				
-				// Writes data to the document unconverted
-				if (filePointer != NULL && (CounterRecvBuffArray == (NumColRecvBuffArray-1)))
-				{
-					filePointer = fopen(fullFilePath, "a");
-					for (i=0; i<NumColRecvBuffArray; i++){
-						fwrite(recvBuff[i], recvBuff[i][nElementIndex], 1, filePointer);
-					}
-					fclose(filePointer);
-				}
-				
 				// Every 20 lines
 				bufEpoch = time(0);
 				if(bufEpoch > (epochTimeSecondsTracking + dataToMountRate)){
 					epochTimeSecondsTracking = bufEpoch;
-					//offset = findOffset(recvBuff, n, lineLength);
+					offset = findOffset(recvBuff[CounterRecvBuffArray], n, lineLength);
 					
 					//if(offset >= 0){
-					if(recvBuff[lineLength-3] == 'E'){
+					if(offset >= 0){
 						//writeArray=recvBuff[offset];
-						writeArray=recvBuff;
+						writeArray=recvBuff[CounterRecvBuffArray] + offset;
 						wrPtr=&writeArray;
 						
 						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
@@ -203,9 +192,22 @@ int main(int argc, char *argv[])
 						//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 						//write(i2cFile, command, strlen(command));
 						command[0] = '2';
-						strncat(command+1, recvBuff+2, 9);
+						strncat(command+1, recvBuff[CounterRecvBuffArray]+2, 9);
 						write(i2cFile, command, strlen(command));
 					}
+				}
+				
+				// Writes data to the document unconverted
+				if (filePointer != NULL && (CounterRecvBuffArray == (NumColRecvBuffArray-1)))
+				{
+					filePointer = fopen(fullFilePath, "a");
+					for (i=0; i<NumColRecvBuffArray; i++){
+						fwrite(recvBuff[i], recvBuff[i][nElementIndex], 1, filePointer);
+					}
+					CounterRecvBuffArray = 0;
+					fclose(filePointer);
+				}else{
+					CounterRecvBuffArray++;
 				}
 				
 				bufEpoch = time(0);
@@ -218,10 +220,10 @@ int main(int argc, char *argv[])
 					fclose(filePointer);
 					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 					createNewFile = 1;
-				}		
+				}
 				
 				fileLineCount++;
-				CounterRecvBuffArray++;
+				
 			}
 			
 			if(filePointer!=NULL){
@@ -249,26 +251,27 @@ int main(int argc, char *argv[])
 /*///////////////////////////////////////EXAMPLE//////////////////////////////////////
 correct data line: 123456789END
 
-potential recvArray to be sent into the function: 3456789END123456789END12
+potential offsetingArray to be sent into the function: 3456789END123456789END12
 the function will return 10.
 
-potential recvArray to be sent into the function: 3456789END123456789EN
+potential offsetingArray to be sent into the function: 3456789END123456789EN
 the function will return -1 because a complete string of 123456789END can't be achieved.
 */
-short findOffset(char* recvArray, short lengthOfArray, short lengthOfLine){
+short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 	short result = -1;
 	short i;
 	
-	i = lengthOfLine - 3; // -1 puts it at the end of the potential Dataline, -3 puts is at the potential 'E'
+	i = lengthOfLine - 3; // -1 puts it at the end of the potential Dataline or 'D', -3 puts is at the potential 'E'
 	
 	// This will keep looping through the array till it finds an 'E' followed by an 'N' and a 'D' or is hits the end and will return a -1
 	while(i < lengthOfArray-2){ // its lengthOfArray-2 because 'E', 'N', and 'D' must match. If it reaches lengthOfArray-2, there couldn't be 'E', 'N', and 'D'.
-		if(recvArray[i] == 'E'){
-			if (recvArray[i+1] == 'N' && recvArray[i+2] == 'D'){
-				result = i - (lengthOfLine-2) + 1; //the element in the recvArray that starts the propper data line
+		if(offsetingArray[i] == 'E'){
+			if (offsetingArray[i+1] == 'N' && offsetingArray[i+2] == 'D'){
+				result = i - (lengthOfLine - 3); //the element in the offsetingArray that starts the propper data line
 				break;
 			}
 		}
+		i++;
 	}
 	return result;
 }
