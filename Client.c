@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 	short offset;
 	unsigned short CounterRecvBuffArray = 0;
 	
-	unsigned int DataLineCounter;
+	unsigned short DataLineCounter;
 	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
 	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
 	char DataEndLine[3];
@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
 					//strcpy(fullFilePath, mostFilePath);
 					strcat(fullFilePath, fileCounter);
 					strcat(fullFilePath, fileExt);
+					filePointer = fopen(fullFilePath, "a");
 					createNewFile = 0;
 				}
 				
@@ -137,7 +138,7 @@ int main(int argc, char *argv[])
 						writeArray=recvBuff[CounterRecvBuffArray] + offset;
 						wrPtr=&writeArray;
 						
-						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
+						DataLineCounter = (unsigned short)getIntFromByte(wrPtr,2);
 						printf("%d ", DataLineCounter); // Line Counter
 				  
 						DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
@@ -200,13 +201,14 @@ int main(int argc, char *argv[])
 				// Writes data to the document unconverted
 				if (createNewFile == 0 && (CounterRecvBuffArray == (NumColRecvBuffArray-1)))
 				{
-					filePointer = fopen(fullFilePath, "a");
+					//filePointer = fopen(fullFilePath, "a");
 					for (i=0; i<NumColRecvBuffArray; i++){
 						fwrite(recvBuff[i], recvBuff[i][nElementIndex], 1, filePointer);
 					}
+					fflush(filePointer);
 					CounterRecvBuffArray = 0;
-					fclose(filePointer);
-					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+					//fclose(filePointer);
+					//filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 				}else{
 					CounterRecvBuffArray++;
 				}
