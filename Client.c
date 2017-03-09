@@ -25,7 +25,7 @@ unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* , unsigned char** , short);
 int tryNewSocketConnection();
 short findOffset(char[] , short , short);
-unsigned short getNumberOfFullElements(char (*)[ PACKET_LENGTH +1] , unsigned short , unsigned short , unsigned short );
+unsigned short getNumberOfFullElements(char (*)[ PACKET_LENGTH] , unsigned short , unsigned short , unsigned short, unsigned short * );
 
 //Globals
 int ServerFileNum;
@@ -44,7 +44,8 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 
 int main(int argc, char *argv[])
 {
-	char recvBuff[ NUM_COL_RECV_BUFF_ARRAY ][PACKET_LENGTH +1]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
+	char recvBuff[ NUM_COL_RECV_BUFF_ARRAY ][PACKET_LENGTH]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
+	unsigned short recvBuffRowLength[NUM_COL_RECV_BUFF_ARRAY] = 0;
 	unsigned char n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
@@ -119,10 +120,10 @@ int main(int argc, char *argv[])
 			{				
 				n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH);
 				if(n!=0){
-					recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
+					recvBuffRowLength[CounterRecvBuffArray] = n; //saves n to the rowlength array
 					strikeCounter = 0;
 					do{		
-						recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
+						recvBuffRowLength[CounterRecvBuffArray] = n; //saves n to the rowlength array
 						CounterRecvBuffArray++;
 					}while ((CounterRecvBuffArray <= ( NUM_COL_RECV_BUFF_ARRAY -1)) && (n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH)) > 0); // The order of the conditional statement matters. If the first condition fails it will not check the second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					
@@ -148,7 +149,7 @@ int main(int argc, char *argv[])
 					bufEpoch = time(0);
 					if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
 						epochTimeSecondsTracking = bufEpoch;
-						offset = findOffset(recvBuff[CounterRecvBuffArray], recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ], LINE_LENGTH);
+						offset = findOffset(recvBuff[CounterRecvBuffArray], recvBuffRowLength[CounterRecvBuffArray] , LINE_LENGTH);
 						
 						//if(offset >= 0){
 						if(offset >= 0){
@@ -220,11 +221,11 @@ int main(int argc, char *argv[])
 					if (createNewFile == 0){
 
 						while(i <= CounterRecvBuffArray){
-							while(recvBuff[i][ N_ELEMENT_INDEX ] != PACKET_LENGTH){
-								fwrite(recvBuff[i], recvBuff[i][ N_ELEMENT_INDEX ], 1, filePointer);
+							while(recvBuffRowLength[CounterRecvBuffArray] != PACKET_LENGTH){
+								fwrite(recvBuff[i], recvBuffRowLength[CounterRecvBuffArray] , 1, filePointer);
 								i++;
 							}
-							numFullTransmissions = getNumberOfFullElements(recvBuff, i, CounterRecvBuffArray, PACKET_LENGTH);
+							numFullTransmissions = getNumberOfFullElements(recvBuff, i, CounterRecvBuffArray, PACKET_LENGTH, recvBuffRowLength);
 							if(numFullTransmissions > 0){
 								fwrite(recvBuff[i], PACKET_LENGTH, numFullTransmissions, filePointer);
 								i+= numFullTransmissions;
@@ -314,11 +315,11 @@ short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 }
 
 
-unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH +1], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength){
+unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH ], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength, unsigned short rowLengthArray[]){
 	unsigned short result = 0;
 	unsigned short iCounter = startingCol;
 	
-	while((arrayToCheck[iCounter][packetLength] == packetLength) && (iCounter <= maxColNum)){ //the last element (the next element after the max packet size) in each row is the number of bytes in that recieved row.
+	while((rowLengthArray[iCounter] == packetLength) && (iCounter <= maxColNum)){ 
 		result++;
 		iCounter++;
 	}
