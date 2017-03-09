@@ -25,7 +25,7 @@ unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* , unsigned char** , short);
 int tryNewSocketConnection();
 short findOffset(char[] , short , short);
-unsigned short getNumberOfFullElements(char** , unsigned short , unsigned short , unsigned short ){
+unsigned short getNumberOfFullElements(char (*)[ PACKET_LENGTH +1] , unsigned short , unsigned short , unsigned short );
 
 //Globals
 int ServerFileNum;
@@ -103,6 +103,8 @@ int main(int argc, char *argv[])
 	time_t epochTimeSecondsTracking = time(0);
 	time_t bufEpoch;
 	unsigned char createNewFile = 1; // 1 yes, 0 no
+	unsigned short numFullTransmissions = 0;
+	unsigned short strikeCounter = 0;
 	
 	
 	
@@ -117,7 +119,7 @@ int main(int argc, char *argv[])
 			{				
 				n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH);
 				if(n!=0){
-					
+					strikeCounter = 0;
 					while (n > 0 && (CounterRecvBuffArray <= ( NUM_COL_RECV_BUFF_ARRAY -1))){		
 						recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
 						CounterRecvBuffArray++;
@@ -212,7 +214,7 @@ int main(int argc, char *argv[])
 					// WRITES DATA to the document unconverted
 					if (createNewFile == 0){
 
-						while(i =< CounterRecvBuffArray){
+						while(i <= CounterRecvBuffArray){
 							while(recvBuff[i][ N_ELEMENT_INDEX ] != PACKET_LENGTH){
 								fwrite(recvBuff[i], recvBuff[i][ N_ELEMENT_INDEX ], 1, filePointer);
 								i++;
@@ -307,7 +309,7 @@ short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 }
 
 
-unsigned short getNumberOfFullElements(char** arrayToCheck, unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength){
+unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength){
 	unsigned short result = 0;
 	unsigned short iCounter = startingCol;
 	
