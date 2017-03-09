@@ -13,7 +13,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#define N_ELEMENT_INDEX 87 // 3*29 bytes
+#define N_ELEMENT_INDEX 87 // (3*29-1)+1 bytes
 #define NEW_FILE_RATE 900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
 #define DATA_TO_MOUNT_RATE 4 // number of seconds between data sent to mount
 #define LINE_LENGTH 29
@@ -44,7 +44,7 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 
 int main(int argc, char *argv[])
 {
-	char recvBuff[NUM_COL_RECV_BUFF_ARRAY][88]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
+	char recvBuff[ NUM_COL_RECV_BUFF_ARRAY ][PACKET_LENGTH +1]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
 	unsigned char n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 	time_t epochTimeSecondsFile = time(0);
 	time_t epochTimeSecondsTracking = time(0);
 	time_t bufEpoch;
-	unsigned char createNewFile = 1; // 1 yes, 0 no
+	unsigned short createNewFile = 1; // 1 yes, 0 no
 	unsigned short numFullTransmissions = 0;
 	unsigned short strikeCounter = 0;
 	
@@ -119,11 +119,16 @@ int main(int argc, char *argv[])
 			{				
 				n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH);
 				if(n!=0){
+					recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
 					strikeCounter = 0;
-					while (n > 0 && (CounterRecvBuffArray <= ( NUM_COL_RECV_BUFF_ARRAY -1))){		
+					do{		
 						recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
 						CounterRecvBuffArray++;
-						n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH);
+					}while ((CounterRecvBuffArray <= ( NUM_COL_RECV_BUFF_ARRAY -1)) && (n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH)) > 0); // The order of the conditional statement matters. If the first condition fails it will not check the second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
+					
+					//can't think of a more eloquent solution in the little I have. the above loop increments 1 past the range then jumps out of the loop before causing hard. this if statement drops it back below the limit.
+					if(CounterRecvBuffArray >= NUM_COL_RECV_BUFF_ARRAY){
+						CounterRecvBuffArray = NUM_COL_RECV_BUFF_ARRAY - 1;
 					}
 					
 					// At the start of every new "page", it creates and opens a new file
@@ -309,7 +314,7 @@ short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 }
 
 
-unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength){
+unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH +1], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength){
 	unsigned short result = 0;
 	unsigned short iCounter = startingCol;
 	
