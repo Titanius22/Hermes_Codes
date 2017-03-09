@@ -19,6 +19,7 @@
 #define LINE_LENGTH 29
 #define PACKET_LENGTH 87 //3*29
 #define NUM_COL_RECV_BUFF_ARRAY 55
+#define RECV_BUFF_ARRAY_LENGTH 4785
 
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
@@ -44,42 +45,13 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 
 int main(int argc, char *argv[])
 {
-	char recvBuff[ NUM_COL_RECV_BUFF_ARRAY ][PACKET_LENGTH]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
-	unsigned short recvBuffRowLength[NUM_COL_RECV_BUFF_ARRAY] = 0;
+	char recvBuff[ RECV_BUFF_ARRAY_LENGTH ]; // one long array of recv data
+	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
+	unsigned short recvBuffRowLength[NUM_COL_RECV_BUFF_ARRAY];
 	unsigned char n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
-
-    /////For when the ip address was a second argument
-	// Checks that command is correct
-	//if(argc != 2)
-    //{
-    //    printf("\n Usage: %s <ip of server> \n",argv[0]);
-    //    return 1;
-    //}
 	
-	// I2C STUFF. setting up i2c for communication
-	printf("I2C: Connecting\n");
-	int i2cFile;
-
-	if ((i2cFile = open(devName, O_RDWR)) < 0) {
-		fprintf(stderr, "I2C: Failed to access %d\n", devName);
-		exit(1);
-	}
-
-	printf("I2C: acquiring buss to 0x%x\n", ADDRESS);
-
-	if (ioctl(i2cFile, I2C_SLAVE, ADDRESS) < 0) {
-		fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);
-		exit(1);
-	}
-	
-	//look at SocketNum file to check what number to start with
-	SocketNumFile = fopen(SocketNumFileName, "r");
-	fread(SocketNumFileData, 2, 1, SocketNumFile);
-	fclose(SocketNumFile);
-	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
-
 	unsigned short i = 0;
 	int fileCount = 1;
 	int fileLineCount = 1;
@@ -107,7 +79,27 @@ int main(int argc, char *argv[])
 	unsigned short numFullTransmissions = 0;
 	unsigned short strikeCounter = 0;
 	
+	// I2C STUFF. setting up i2c for communication
+	printf("I2C: Connecting\n");
+	int i2cFile;
+
+	if ((i2cFile = open(devName, O_RDWR)) < 0) {
+		fprintf(stderr, "I2C: Failed to access %d\n", devName);
+		exit(1);
+	}
+
+	printf("I2C: acquiring buss to 0x%x\n", ADDRESS);
+
+	if (ioctl(i2cFile, I2C_SLAVE, ADDRESS) < 0) {
+		fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);
+		exit(1);
+	}
 	
+	//look at SocketNum file to check what number to start with
+	SocketNumFile = fopen(SocketNumFileName, "r");
+	fread(SocketNumFileData, 2, 1, SocketNumFile);
+	fclose(SocketNumFile);
+	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 	
 	while(1){ 
 		
@@ -115,22 +107,17 @@ int main(int argc, char *argv[])
 		if(tryNewSocketConnection() == 0){
 		
 		
-			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
 			while (n > 0) 
 			{				
-				n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH);
+				n = read(ServerFileNum, recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement);
 				if(n!=0){
-					recvBuffRowLength[CounterRecvBuffArray] = n; //saves n to the rowlength array
 					strikeCounter = 0;
 					do{		
-						recvBuffRowLength[CounterRecvBuffArray] = n; //saves n to the rowlength array
-						CounterRecvBuffArray++;
-					}while ((CounterRecvBuffArray <= ( NUM_COL_RECV_BUFF_ARRAY -1)) && (n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], PACKET_LENGTH)) > 0); // The order of the conditional statement matters. If the first condition fails it will not check the second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
-					
-					//can't think of a more eloquent solution in the little I have. the above loop increments 1 past the range then jumps out of the loop before causing hard. this if statement drops it back below the limit.
-					if(CounterRecvBuffArray >= NUM_COL_RECV_BUFF_ARRAY){
-						CounterRecvBuffArray = NUM_COL_RECV_BUFF_ARRAY - 1;
-					}
+						recvBuffCURRENTelement += n;
+					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
+					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
+					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
+					*/
 					
 					// At the start of every new "page", it creates and opens a new file
 					if (createNewFile == 1){
@@ -145,16 +132,16 @@ int main(int argc, char *argv[])
 						createNewFile = 0;
 					}
 					
-					// Every 20 lines
+					// Sends data to the mount
 					bufEpoch = time(0);
 					if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
 						epochTimeSecondsTracking = bufEpoch;
-						offset = findOffset(recvBuff[CounterRecvBuffArray], recvBuffRowLength[CounterRecvBuffArray] , LINE_LENGTH);
+						offset = findOffset(recvBuff[0], LINE_LENGTH *4, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
 						
 						//if(offset >= 0){
 						if(offset >= 0){
 							//writeArray=recvBuff[offset];
-							writeArray=recvBuff[CounterRecvBuffArray] + offset;
+							writeArray=recvBuff[0] + offset;
 							wrPtr=&writeArray;
 							
 							DataLineCounter = (unsigned short)getIntFromByte(wrPtr,2);
@@ -212,34 +199,22 @@ int main(int argc, char *argv[])
 							//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 							//write(i2cFile, command, strlen(command));
 							command[0] = '2';
-							strncat(command+1, recvBuff[CounterRecvBuffArray]+2, 9);
+							strncat(command+1, recvBuff[offset]+2, 9);
 							write(i2cFile, command, strlen(command));
 						}
 					}
 					
-					// WRITES DATA to the document unconverted
+					
 					if (createNewFile == 0){
-
-						while(i <= CounterRecvBuffArray){
-							while(recvBuffRowLength[CounterRecvBuffArray] != PACKET_LENGTH){
-								fwrite(recvBuff[i], recvBuffRowLength[CounterRecvBuffArray] , 1, filePointer);
-								i++;
-							}
-							numFullTransmissions = getNumberOfFullElements(recvBuff, i, CounterRecvBuffArray, PACKET_LENGTH, recvBuffRowLength);
-							if(numFullTransmissions > 0){
-								fwrite(recvBuff[i], PACKET_LENGTH, numFullTransmissions, filePointer);
-								i+= numFullTransmissions;
-							}
-						}
-
+						
+						// WRITES DATA to the document unconverted
+						fwrite(&recvBuff[0], recvBuffCURRENTelement, 1, filePointer);
 						fflush(filePointer);
-						CounterRecvBuffArray = 0;
+						recvBuffCURRENTelement = 0;
 						//fclose(filePointer);
 						//filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
-					}				
-					
-					if(createNewFile == 0){
 						
+						// close current file, set flag to open a new one
 						bufEpoch = time(0);
 						if(bufEpoch > (epochTimeSecondsFile + NEW_FILE_RATE)){
 							epochTimeSecondsFile = bufEpoch;
@@ -251,14 +226,15 @@ int main(int argc, char *argv[])
 							filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 							createNewFile = 1;
 						}
-					}
+					}				
 					
 					fileLineCount++;
 				}
-				else{
+				
+				if(n=0){
 					strikeCounter++;
 					n=1; //sets it back to not-zero so that it reading too fast won't trigger a failure (reading too fast as in it clears the buffer before it has a chance to get more data)
-					if(strikeCounter > 3){ //3 strikes, you're out. (the reading is probally failing of something)
+					if(strikeCounter >= 3){ //3 strikes, you're out. (the reading is probally failing of something)
 						n=0; //sets it to zero so it will fail the larger while loop
 					}
 				}
