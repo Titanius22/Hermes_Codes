@@ -106,15 +106,14 @@ int main(int argc, char *argv[])
 		// If connection was made properly
 		if(tryNewSocketConnection() == 0){
 		
-		
 			while (n > 0) 
 			{				
-				n = read(ServerFileNum, recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement);
+				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement);
 				if(n!=0){
 					strikeCounter = 0;
 					do{		
 						recvBuffCURRENTelement += n;
-					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
+					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
 					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
 					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					*/
@@ -136,12 +135,12 @@ int main(int argc, char *argv[])
 					bufEpoch = time(0);
 					if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
 						epochTimeSecondsTracking = bufEpoch;
-						offset = findOffset(recvBuff[0], LINE_LENGTH *4, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
+						offset = findOffset(recvBuff, LINE_LENGTH *4, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
 						
 						//if(offset >= 0){
 						if(offset >= 0){
 							//writeArray=recvBuff[offset];
-							writeArray=recvBuff[0] + offset;
+							writeArray = recvBuff + offset;
 							wrPtr=&writeArray;
 							
 							DataLineCounter = (unsigned short)getIntFromByte(wrPtr,2);
@@ -199,7 +198,7 @@ int main(int argc, char *argv[])
 							//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 							//write(i2cFile, command, strlen(command));
 							command[0] = '2';
-							strncat(command+1, recvBuff[offset]+2, 9);
+							strncat(command+1, recvBuff+offset+2, 9);
 							write(i2cFile, command, strlen(command));
 						}
 					}
@@ -231,7 +230,7 @@ int main(int argc, char *argv[])
 					fileLineCount++;
 				}
 				
-				if(n=0){
+				if(n==0){
 					strikeCounter++;
 					n=1; //sets it back to not-zero so that it reading too fast won't trigger a failure (reading too fast as in it clears the buffer before it has a chance to get more data)
 					if(strikeCounter >= 3){ //3 strikes, you're out. (the reading is probally failing of something)

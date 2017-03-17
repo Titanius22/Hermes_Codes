@@ -13,12 +13,6 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#define N_ELEMENT_INDEX 87
-#define NEW_FILE_RATE 900 // number of seconds before data saving switches to a new file.
-#define DATA_TO_MOUNT_RATE 2 // number of seconds between data sent to mount
-#define LINE_LENGTH lineLength 29
-#define NUM_COL_RECV_BUFF_ARRAY 55
-
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* , unsigned char** , short);
@@ -30,6 +24,7 @@ int ServerFileNum;
 struct sockaddr_in serv_addr;
 unsigned short startingSocketNum; // = 5000;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
+short lineLength = 32;
 char SocketNumFileData[5];
 FILE *SocketNumFile;
 
@@ -42,8 +37,8 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 
 int main(int argc, char *argv[])
 {
-	char recvBuff[NUM_COL_RECV_BUFF_ARRAY][88]; // 88th byte used to story n.  (55 lines)*(87 bytes per line) =  38280 bits or 0.255 seconds of transmission for a 150kbps transmission
-	unsigned char n = 0;
+    char recvBuff[100];
+	int n = 0;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 
@@ -77,30 +72,24 @@ int main(int argc, char *argv[])
 	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 
-	unsigned short i = 0;
 	int fileCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
-	const char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
-	char fileName[] = "DistanceTestFULLER";
+	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
+	char fileName[] = "DistanceTest";
 	char fileExt[] = ".txt";
 	char fullFilePath[80];
-	//char fullFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL.txt";;
 	FILE *filePointer;
+	//char leftOvers[25];
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
-	char command[30] = "";
+	char command[30];
 	short offset;
-	unsigned short CounterRecvBuffArray = 0;
 	
-	unsigned short DataLineCounter;
-	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
-	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
+	unsigned int DataLineCounter;
+	unsigned long DataGPS[3]; // Longitude, Latitude, Altitude
+	unsigned int DataSensors[8]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
 	char DataEndLine[3];
-	time_t epochTimeSecondsFile = time(0);
-	time_t epochTimeSecondsTracking = time(0);
-	time_t bufEpoch;
-	unsigned char createNewFile = 1; // 1 yes, 0 no
 	
 	while(1){ 
 		
@@ -109,12 +98,11 @@ int main(int argc, char *argv[])
 		
 		
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
-			while ((n = read(ServerFileNum, recvBuff[CounterRecvBuffArray], LINE_LENGTH*3)) > 0) 
-			{				
-				recvBuff[CounterRecvBuffArray][ N_ELEMENT_INDEX ] = n; //saves n to the element after the data
+			while ( (n = read(ServerFileNum, recvBuff, lineLength*3)) > 0) 
+			{
 				
 				// At the start of every new "page", it creates and opens a new file
-				if (createNewFile == 1){
+				if (filePointer == NULL){
 					sprintf(fileCounter, "%04d", fileCount);
 				
 					strcpy(fullFilePath, filepath);
@@ -122,63 +110,66 @@ int main(int argc, char *argv[])
 					//strcpy(fullFilePath, mostFilePath);
 					strcat(fullFilePath, fileCounter);
 					strcat(fullFilePath, fileExt);
+					
 					filePointer = fopen(fullFilePath, "a");
-					createNewFile = 0;
 				}
 				
+				// Writes data to the document unconverted
+				if (filePointer != NULL)
+				{
+					fwrite(recvBuff, n, 1, filePointer);
+				}
+				
+				
+				recvBuff[n] = 0;
+				
+				
 				// Every 20 lines
-				bufEpoch = time(0);
-				if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
-					epochTimeSecondsTracking = bufEpoch;
-					offset = findOffset(recvBuff[CounterRecvBuffArray], n, LINE_LENGTH);
+				if(fileLineCount == 200){
+					
+					//offset = findOffset(recvBuff, n, lineLength);
 					
 					//if(offset >= 0){
-					if(offset >= 0){
+					if(recvBuff[29] == 'E'){
 						//writeArray=recvBuff[offset];
-						writeArray=recvBuff[CounterRecvBuffArray] + offset;
+						writeArray=recvBuff;
 						wrPtr=&writeArray;
 						
-						DataLineCounter = (unsigned short)getIntFromByte(wrPtr,2);
+						DataLineCounter = (unsigned int)getIntFromByte(wrPtr,3);
 						printf("%d ", DataLineCounter); // Line Counter
 				  
-						DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%d ", DataGPS[0]); // Longitude
+						DataGPS[0] = (unsigned long)getIntFromByte(wrPtr,5);
+						printf("%lu ", DataGPS[0]); // Longitude
 				  
-						DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%d ", DataGPS[1]); // Latitude
+						DataGPS[1] = (unsigned long)getIntFromByte(wrPtr,5);
+						printf("%lu ", DataGPS[1]); // Latitude
 
 						DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
 						printf("%d ", DataGPS[2]); // Altitude
-						
-						DataGPS[3] = (unsigned int)getIntFromByte(wrPtr,2);
-						printf("%d ", DataGPS[3]); // Seconds since half UTC day
 
 						DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
 						printf("%d ", DataSensors[0]); // External Thermistor
 				  
 						DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
 						printf("%d ", DataSensors[1]); // Battery Voltage
-						
+
 						DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[2]); // Battery Current
+						printf("%d ", DataSensors[2]); // Magnotometer X
 
 						DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[3]); // Magnotometer X
+						printf("%d ", DataSensors[3]); // Magnotometer Y
 
 						DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[4]); // Magnotometer Y
+						printf("%d ", DataSensors[4]); // Magnotometer Z
 
 						DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[5]); // Magnotometer Z
+						printf("%d ", DataSensors[5]); // Humidity
 
-						DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,1);
-						printf("%d ", DataSensors[6]); // Humidity
+						DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,4);
+						printf("%d ", DataSensors[6]); // Pressure
 
-						DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,3);
-						printf("%d ", DataSensors[7]); // Pressure
-
-						DataSensors[8] = (unsigned int)getIntFromByte(wrPtr,2);
-						printf("%d ", DataSensors[8]); // Internal Temperature
+						DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,2);
+						printf("%d ", DataSensors[7]); // Internal Temperature
 						
 						DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
 						printf("%c", DataEndLine[0]); // 'E'
@@ -190,53 +181,21 @@ int main(int argc, char *argv[])
 						printf("%c\n", DataEndLine[2]); // 'D'
 						
 						// Send data over I2C
-						//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
-						//write(i2cFile, command, strlen(command));
-						command[0] = '2';
-						strncat(command+1, recvBuff[CounterRecvBuffArray]+2, 9);
+						sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 						write(i2cFile, command, strlen(command));
 					}
-				}
-				
-				// Writes data to the document unconverted
-				if (createNewFile == 0 && (CounterRecvBuffArray == ( NUM_COL_RECV_BUFF_ARRAY -1)))
-				{
-					//filePointer = fopen(fullFilePath, "a");
-					for (i=0; i< NUM_COL_RECV_BUFF_ARRAY ; i++){
-						fwrite(recvBuff[i], recvBuff[i][ N_ELEMENT_INDEX ], 1, filePointer);
-					}
-					fflush(filePointer);
-					CounterRecvBuffArray = 0;
-					//fclose(filePointer);
-					//filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
-				}else{
-					CounterRecvBuffArray++;
-				}
-				
-				
-				if(createNewFile == 0){
 					
-					bufEpoch = time(0);
-					if(bufEpoch > (epochTimeSecondsFile + NEW_FILE_RATE)){
-						epochTimeSecondsFile = bufEpoch;
-						
-						// File tracking and counting
-						fileLineCount = 0;
-						fileCount++;
-						fclose(filePointer);
-						filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
-						createNewFile = 1;
-					}
+					// File tracking and counting
+					fileLineCount = 0;
+					fileCount++;
+					fclose(filePointer);
+					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 				}
-				
 				fileLineCount++;
-				
 			}
-			
 			if(filePointer!=NULL){
 				fclose(filePointer);
 				filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
-				createNewFile = 1;
 			}
 
 		}
@@ -258,27 +217,26 @@ int main(int argc, char *argv[])
 /*///////////////////////////////////////EXAMPLE//////////////////////////////////////
 correct data line: 123456789END
 
-potential offsetingArray to be sent into the function: 3456789END123456789END12
+potential recvArray to be sent into the function: 3456789END123456789END12
 the function will return 10.
 
-potential offsetingArray to be sent into the function: 3456789END123456789EN
+potential recvArray to be sent into the function: 3456789END123456789EN
 the function will return -1 because a complete string of 123456789END can't be achieved.
 */
-short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
+short findOffset(char recvArray[], short lengthOfArray, short lengthOfLine){
 	short result = -1;
 	short i;
 	
-	i = lengthOfLine - 3; // -1 puts it at the end of the potential Dataline or 'D', -3 puts is at the potential 'E'
+	i = lengthOfLine - 3; // -1 puts it at the end of the potential Dataline, -3 puts is at the potential 'E'
 	
 	// This will keep looping through the array till it finds an 'E' followed by an 'N' and a 'D' or is hits the end and will return a -1
 	while(i < lengthOfArray-2){ // its lengthOfArray-2 because 'E', 'N', and 'D' must match. If it reaches lengthOfArray-2, there couldn't be 'E', 'N', and 'D'.
-		if(offsetingArray[i] == 'E'){
-			if (offsetingArray[i+1] == 'N' && offsetingArray[i+2] == 'D'){
-				result = i - (lengthOfLine - 3); //the element in the offsetingArray that starts the propper data line
+		if(recvArray[i] == 'E'){
+			if (recvArray[i+1] == 'N' && recvArray[i+2] == 'D'){
+				result = i - (lengthOfLine-2) + 1; //the element in the recvArray that starts the propper data line
 				break;
 			}
 		}
-		i++;
 	}
 	return result;
 }
@@ -311,10 +269,10 @@ int tryNewSocketConnection(){
 	// The arv[1] was originally the first trminal argument which was the ip address
 	//if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
 	if(inet_pton(AF_INET, "10.1.1.232", &serv_addr.sin_addr)<=0)
-	{
-		printf("\n inet_pton error occured\n");
-		return -1;
-	}
+    {
+        printf("\n inet_pton error occured\n");
+        return -1;
+    }
 	
 	if(connect(ServerFileNum, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{
