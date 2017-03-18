@@ -101,8 +101,6 @@ int main(int argc, char *argv[])
 	fread(SocketNumFileData, 2, 1, SocketNumFile);
 	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
-
-	char fileName[] = "DistanceTest";
 	
 	while(1){ 
 		
@@ -113,6 +111,14 @@ int main(int argc, char *argv[])
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
 			while ( (n = read(ServerFileNum, recvBuff, lineLength*3)) > 0) 
 			{
+				if(n!=0){
+					strikeCounter = 0;
+					//do{		
+					//	recvBuffCURRENTelement += n;
+					//}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
+					//second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
+					//outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
+					//*/
 					
 					// At the start of every new "page", it creates and opens a new file
 					if (createNewFile == 1){
@@ -229,15 +235,15 @@ int main(int argc, char *argv[])
 					}				
 					
 					fileLineCount++;
+				}
 				
-				
-					if(n==0){
-						strikeCounter++;
-						n=1; //sets it back to not-zero so that it reading too fast won't trigger a failure (reading too fast as in it clears the buffer before it has a chance to get more data)
-						if(strikeCounter >= 3){ //3 strikes, you're out. (the reading is probally failing of something)
-							n=0; //sets it to zero so it will fail the larger while loop
-						}
+				if(n==0){
+					strikeCounter++;
+					n=1; //sets it back to not-zero so that it reading too fast won't trigger a failure (reading too fast as in it clears the buffer before it has a chance to get more data)
+					if(strikeCounter >= 3){ //3 strikes, you're out. (the reading is probally failing of something)
+						n=0; //sets it to zero so it will fail the larger while loop
 					}
+				}
 			}
 			
 			if(filePointer!=NULL){
