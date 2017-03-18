@@ -1,4 +1,4 @@
-//http://www.thegeekstuff.com/2011/12/c-socket-programming/?utm_source=feedburner
+//http://www.thegeekstuff.com/2011/12/c-socket-programming/
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -52,17 +52,26 @@ int main(int argc, char *argv[])
 	req.tv_nsec = 500000000; //500ms
 
     /////For when the ip address was a second argument
-	// Checks that command is correct
-	//if(argc != 2)
-    //{
-    //    printf("\n Usage: %s <ip of server> \n",argv[0]);
+	int fileCount = 1;
+	int fileLineCount = 1;
+	char fileCounter[8];
+	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
     //    return 1;
+	char fileExt[] = ".txt";
+	char fullFilePath[80];
+	FILE *filePointer;
+	unsigned char* writeArray;
+	unsigned char** wrPtr;
+	char command[30] = "";
 	short offset = 0;
-    //}
+	
 	unsigned short DataLineCounter;
 	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
 	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
 	char DataEndLine[3];
+	time_t epochTimeSecondsFile = time(0);
+	time_t epochTimeSecondsTracking = time(0);
+	time_t bufEpoch;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -86,18 +95,7 @@ int main(int argc, char *argv[])
 	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 
-	int fileCount = 1;
-	int fileLineCount = 1;
-	char fileCounter[8];
-	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
 	char fileName[] = "DistanceTest";
-	char fileExt[] = ".txt";
-	char fullFilePath[80];
-	FILE *filePointer;
-	//char leftOvers[25];
-	unsigned char* writeArray;
-	unsigned char** wrPtr;
-	char command[30];
 	
 	while(1){ 
 		
@@ -135,12 +133,16 @@ int main(int argc, char *argv[])
 				// Every 20 lines
 				if(fileLineCount == 200){
 					
-					//offset = findOffset(recvBuff, n, lineLength);
-					
-					//if(offset >= 0){
-					if(recvBuff[29] == 'E'){
+					// Sends data to the mount
+					bufEpoch = time(0);
+					if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
+						epochTimeSecondsTracking = bufEpoch;
+						offset = findOffset(recvBuff, LINE_LENGTH *3, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
+						
+						//if(offset >= 0){
+						if(offset >= 0){
 							//writeArray=recvBuff[offset];
-						writeArray=recvBuff;
+							writeArray = recvBuff + offset;
 							wrPtr=&writeArray;
 							
 							DataLineCounter = (unsigned short)getIntFromByte(wrPtr,2);
@@ -200,6 +202,7 @@ int main(int argc, char *argv[])
 							command[0] = '2';
 							strncat(command+1, recvBuff+offset+2, 9);
 							write(i2cFile, command, strlen(command));
+						}
 					}
 					
 					// File tracking and counting
