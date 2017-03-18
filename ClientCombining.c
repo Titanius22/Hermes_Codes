@@ -47,7 +47,7 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 int main(int argc, char *argv[])
 {
     char recvBuff[100];
-	int n = 0;
+	unsigned short n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 
@@ -57,14 +57,12 @@ int main(int argc, char *argv[])
     //{
     //    printf("\n Usage: %s <ip of server> \n",argv[0]);
     //    return 1;
+	short offset = 0;
     //}
 	unsigned short DataLineCounter;
 	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
 	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
 	char DataEndLine[3];
-	time_t epochTimeSecondsFile = time(0);
-	time_t epochTimeSecondsTracking = time(0);
-	time_t bufEpoch;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -100,7 +98,6 @@ int main(int argc, char *argv[])
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
 	char command[30];
-	short offset;
 	
 	while(1){ 
 		
@@ -138,16 +135,12 @@ int main(int argc, char *argv[])
 				// Every 20 lines
 				if(fileLineCount == 200){
 					
-					// Sends data to the mount
-					bufEpoch = time(0);
-					if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
-						epochTimeSecondsTracking = bufEpoch;
-						offset = findOffset(recvBuff, LINE_LENGTH *4, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
-						
-						//if(offset >= 0){
-						if(offset >= 0){
+					//offset = findOffset(recvBuff, n, lineLength);
+					
+					//if(offset >= 0){
+					if(recvBuff[29] == 'E'){
 							//writeArray=recvBuff[offset];
-							writeArray = recvBuff + offset;
+						writeArray=recvBuff;
 							wrPtr=&writeArray;
 							
 							DataLineCounter = (unsigned short)getIntFromByte(wrPtr,2);
@@ -207,7 +200,6 @@ int main(int argc, char *argv[])
 							command[0] = '2';
 							strncat(command+1, recvBuff+offset+2, 9);
 							write(i2cFile, command, strlen(command));
-						}
 					}
 					
 					// File tracking and counting
