@@ -47,23 +47,27 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 int main(int argc, char *argv[])
 {
     char recvBuff[100];
+	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
+	unsigned short recvBuffRowLength[NUM_COL_RECV_BUFF_ARRAY];
 	unsigned short n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
-
-    /////For when the ip address was a second argument
+	
+	unsigned short i = 0;
 	int fileCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
 	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
-    //    return 1;
+	char fileName[] = "DistanceTestFULLER";
 	char fileExt[] = ".txt";
 	char fullFilePath[80];
+	//char fullFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL.txt";;
 	FILE *filePointer;
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
 	char command[30] = "";
 	short offset = 0;
+	unsigned short CounterRecvBuffArray = 0;
 	
 	unsigned short DataLineCounter;
 	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
@@ -72,6 +76,9 @@ int main(int argc, char *argv[])
 	time_t epochTimeSecondsFile = time(0);
 	time_t epochTimeSecondsTracking = time(0);
 	time_t bufEpoch;
+	unsigned short createNewFile = 1; // 1 yes, 0 no
+	unsigned short numFullTransmissions = 0;
+	unsigned short strikeCounter = 0;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -106,32 +113,25 @@ int main(int argc, char *argv[])
 			//while ( (n = recv(ServerFileNum, recvBuff, 32 , 0)) > 0) same as read if last argument is 0
 			while ( (n = read(ServerFileNum, recvBuff, lineLength*3)) > 0) 
 			{
-				
-				// At the start of every new "page", it creates and opens a new file
-				if (filePointer == NULL){
-					sprintf(fileCounter, "%04d", fileCount);
-				
-					strcpy(fullFilePath, filepath);
-					strcat(fullFilePath, fileName);
-					//strcpy(fullFilePath, mostFilePath);
-					strcat(fullFilePath, fileCounter);
-					strcat(fullFilePath, fileExt);
 					
-					filePointer = fopen(fullFilePath, "a");
-				}
+					// At the start of every new "page", it creates and opens a new file
+					if (createNewFile == 1){
+						sprintf(fileCounter, "%04d", fileCount);
+					
+						strcpy(fullFilePath, filepath);
+						strcat(fullFilePath, fileName);
+						//strcpy(fullFilePath, mostFilePath);
+						strcat(fullFilePath, fileCounter);
+						strcat(fullFilePath, fileExt);
+						filePointer = fopen(fullFilePath, "a");
+						createNewFile = 0;
+					}
 				
-				// Writes data to the document unconverted
-				if (filePointer != NULL)
-				{
-					fwrite(recvBuff, n, 1, filePointer);
-				}
-				
-				
-				recvBuff[n] = 0;
-				
-				
-				// Every 20 lines
-				if(fileLineCount == 200){
+					// Writes data to the document unconverted
+					if (filePointer != NULL)
+					{
+						fwrite(recvBuff, n, 1, filePointer);
+					}
 					
 					// Sends data to the mount
 					bufEpoch = time(0);
@@ -205,17 +205,45 @@ int main(int argc, char *argv[])
 						}
 					}
 					
-					// File tracking and counting
-					fileLineCount = 0;
-					fileCount++;
-					fclose(filePointer);
-					filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
-				}
-				fileLineCount++;
+					
+					if (createNewFile == 0){
+						
+						// WRITES DATA to the document unconverted
+						//fflush(filePointer);
+						recvBuffCURRENTelement = 0;
+						//fclose(filePointer);
+						//filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+						
+						// close current file, set flag to open a new one
+						bufEpoch = time(0);
+						if(bufEpoch > (epochTimeSecondsFile + NEW_FILE_RATE)){
+							epochTimeSecondsFile = bufEpoch;
+							
+							// File tracking and counting
+							fileLineCount = 0;
+							fileCount++;
+							fclose(filePointer);
+							filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+							createNewFile = 1;
+						}
+					}				
+					
+					fileLineCount++;
+				
+				
+					if(n==0){
+						strikeCounter++;
+						n=1; //sets it back to not-zero so that it reading too fast won't trigger a failure (reading too fast as in it clears the buffer before it has a chance to get more data)
+						if(strikeCounter >= 3){ //3 strikes, you're out. (the reading is probally failing of something)
+							n=0; //sets it to zero so it will fail the larger while loop
+						}
+					}
 			}
+			
 			if(filePointer!=NULL){
 				fclose(filePointer);
 				filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
+				createNewFile = 1;
 			}
 
 		}
