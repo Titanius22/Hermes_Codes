@@ -58,6 +58,13 @@ int main(int argc, char *argv[])
     //    printf("\n Usage: %s <ip of server> \n",argv[0]);
     //    return 1;
     //}
+	unsigned short DataLineCounter;
+	unsigned int DataGPS[4]; // Longitude, Latitude, Altitude
+	unsigned int DataSensors[9]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
+	char DataEndLine[3];
+	time_t epochTimeSecondsFile = time(0);
+	time_t epochTimeSecondsTracking = time(0);
+	time_t bufEpoch;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -94,11 +101,6 @@ int main(int argc, char *argv[])
 	unsigned char** wrPtr;
 	char command[30];
 	short offset;
-	
-	unsigned int DataLineCounter;
-	unsigned long DataGPS[3]; // Longitude, Latitude, Altitude
-	unsigned int DataSensors[8]; // External Thermistor, Battery Voltage, Magnotometer X, Y, Z, Humidity, Pressure, Internal Temperature.
-	char DataEndLine[3];
 	
 	while(1){ 
 		
