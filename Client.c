@@ -26,7 +26,7 @@ unsigned long getIntFromByte(unsigned char** , short);
 void insertBytesFromInt(void* , unsigned char** , short);
 int tryNewSocketConnection();
 short findOffset(char[] , short , short);
-unsigned short getNumberOfFullElements(char (*)[ PACKET_LENGTH] , unsigned short , unsigned short , unsigned short, unsigned short * );
+//unsigned short getNumberOfFullElements(char (*)[ PACKET_LENGTH] , unsigned short , unsigned short , unsigned short, unsigned short * );
 
 //Globals
 int ServerFileNum;
@@ -138,7 +138,8 @@ int main(int argc, char *argv[])
 					bufEpoch = time(0);
 					if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
 						epochTimeSecondsTracking = bufEpoch;
-						offset = findOffset(recvBuff, LINE_LENGTH *3, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
+						mathVarible = LINE_LENGTH * 3;
+						offset = findOffset(recvBuff, mathVarible, LINE_LENGTH ); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
 						
 						//if(offset >= 0){
 						if(offset >= 0){
@@ -150,59 +151,60 @@ int main(int argc, char *argv[])
 							printf("%d ", DataLineCounter); // Line Counter
 					  
 							DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%d ", DataGPS[0]); // Longitude
+							//printf("%d ", DataGPS[0]); // Longitude
 					  
 							DataGPS[1] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%d ", DataGPS[1]); // Latitude
+							//printf("%d ", DataGPS[1]); // Latitude
 
 							DataGPS[2] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%d ", DataGPS[2]); // Altitude
+							//printf("%d ", DataGPS[2]); // Altitude
 							
 							DataGPS[3] = (unsigned int)getIntFromByte(wrPtr,2);
-							printf("%d ", DataGPS[3]); // Seconds since half UTC day
+							//printf("%d ", DataGPS[3]); // Seconds since half UTC day
 
 							DataSensors[0] = (unsigned int)getIntFromByte(wrPtr,2);
-							printf("%d ", DataSensors[0]); // External Thermistor
+							//printf("%d ", DataSensors[0]); // External Thermistor
 					  
 							DataSensors[1] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[1]); // Battery Voltage
+							//printf("%d ", DataSensors[1]); // Battery Voltage
 							
 							DataSensors[2] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[2]); // Battery Current
+							//printf("%d ", DataSensors[2]); // Battery Current
 
 							DataSensors[3] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[3]); // Magnotometer X
+							//printf("%d ", DataSensors[3]); // Magnotometer X
 
 							DataSensors[4] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[4]); // Magnotometer Y
+							//printf("%d ", DataSensors[4]); // Magnotometer Y
 
 							DataSensors[5] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[5]); // Magnotometer Z
+							//printf("%d ", DataSensors[5]); // Magnotometer Z
 
 							DataSensors[6] = (unsigned int)getIntFromByte(wrPtr,1);
-							printf("%d ", DataSensors[6]); // Humidity
+							//printf("%d ", DataSensors[6]); // Humidity
 
 							DataSensors[7] = (unsigned int)getIntFromByte(wrPtr,3);
-							printf("%d ", DataSensors[7]); // Pressure
+							//printf("%d ", DataSensors[7]); // Pressure
 
 							DataSensors[8] = (unsigned int)getIntFromByte(wrPtr,2);
-							printf("%d ", DataSensors[8]); // Internal Temperature
+							//printf("%d ", DataSensors[8]); // Internal Temperature
 							
 							DataEndLine[0] = (char)getIntFromByte(wrPtr,1);
-							printf("%c", DataEndLine[0]); // 'E'
+							//printf("%c", DataEndLine[0]); // 'E'
 
 							DataEndLine[1] = (char)getIntFromByte(wrPtr,1);
-							printf("%c", DataEndLine[1]); // 'N'
+							//printf("%c", DataEndLine[1]); // 'N'
 
 							DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
-							printf("%c\n", DataEndLine[2]); // 'D'
+							//printf("%c\n", DataEndLine[2]); // 'D'
 							
 							// Send data over I2C
 							//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 							//write(i2cFile, command, strlen(command));
 							command[0] = '2';
-							strncat(command+1, recvBuff+offset+2, 9);
-							write(i2cFile, command, strlen(command));
+							mathVarible = recvBuff+offset+2;
+							strncat(command+1, mathVarible, 9);
+							write(i2cFile, command, 10); // first is '2' command, last 9 is the GPS data
 						}
 					}
 					
@@ -293,7 +295,7 @@ short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 }
 
 
-unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH ], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength, unsigned short rowLengthArray[]){
+/* unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH ], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength, unsigned short rowLengthArray[]){
 	unsigned short result = 0;
 	unsigned short iCounter = startingCol;
 	
@@ -303,7 +305,7 @@ unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH ], unsi
 	}
 	
 	return result;
-}
+} */
 
 
 //SERVER STUFF. setting up socket
