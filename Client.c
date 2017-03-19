@@ -75,10 +75,14 @@ int main(int argc, char *argv[])
 	time_t epochTimeSecondsFile = time(0);
 	time_t epochTimeSecondsTracking = time(0);
 	time_t bufEpoch;
+	double hateMyLifeSeconds;
+	double hateMyLifeSecondssecond;
+	time_t hateMyLifeEpoch;
 	unsigned short createNewFile = 1; // 1 yes, 0 no
 	unsigned short numFullTransmissions = 0;
 	unsigned short strikeCounter = 0;
 	unsigned short mathVarible = 0;
+	unsigned short doIt = 0;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -113,6 +117,10 @@ int main(int argc, char *argv[])
 				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible);
 				if(n!=0){
 					strikeCounter = 0;
+					if (DataLineCounter > 2000){
+						doIt = 1;
+						hateMyLifeEpoch = time(0);
+					}
 					do{		
 						recvBuffCURRENTelement += n;
 						mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
@@ -120,6 +128,9 @@ int main(int argc, char *argv[])
 					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
 					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					*/
+					if (doIt == 1){
+						hateMyLifeSeconds = difftime(time(0),hateMyLifeEpoch);
+					}
 					
 					// At the start of every new "page", it creates and opens a new file
 					if (createNewFile == 1){
@@ -233,6 +244,12 @@ int main(int argc, char *argv[])
 					}				
 					
 					fileLineCount++;
+					
+					if (doIt == 1){
+						hateMyLifeSecondssecond = difftime(time(0),hateMyLifeEpoch);
+						fprintf(stderr, "reading loop: %f\nAll the rest: %f\n", hateMyLifeSeconds, hateMyLifeSecondssecond);
+						return 0;
+					}
 				}
 				
 				if(n==0){
