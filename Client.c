@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
 	unsigned short numFullTransmissions = 0;
 	unsigned short strikeCounter = 0;
 	unsigned short mathVarible = 0;
+	char * stringVarible;
 	unsigned short doIt = 0;
 	
 	// I2C STUFF. setting up i2c for communication
@@ -213,8 +214,8 @@ int main(int argc, char *argv[])
 							//sprintf(command, "2 %lu %lu %d ", DataGPS[0], DataGPS[1], DataGPS[2]);
 							//write(i2cFile, command, strlen(command));
 							command[0] = '2';
-							mathVarible = recvBuff+offset+2;
-							strncat(command+1, mathVarible, 9);
+							stringVarible = recvBuff+offset+2;
+							strncat(command+1, stringVarible, 9);
 							write(i2cFile, command, 10); // first is '2' command, last 9 is the GPS data
 						}
 					}
