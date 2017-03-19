@@ -75,9 +75,7 @@ int main(int argc, char *argv[])
 	time_t epochTimeSecondsFile = time(0);
 	time_t epochTimeSecondsTracking = time(0);
 	time_t bufEpoch;
-	double hateMyLifeSeconds;
-	double hateMyLifeSecondssecond;
-	time_t hateMyLifeEpoch;
+	struct timespec tstart={0,0}, tend1={0,0}, tend2={0,0};
 	unsigned short createNewFile = 1; // 1 yes, 0 no
 	unsigned short numFullTransmissions = 0;
 	unsigned short strikeCounter = 0;
@@ -120,7 +118,7 @@ int main(int argc, char *argv[])
 					strikeCounter = 0;
 					if (DataLineCounter > 2000){
 						doIt = 1;
-						hateMyLifeEpoch = time(0);
+						clock_gettime(CLOCK_MONOTONIC, &tstart);
 					}
 					do{		
 						recvBuffCURRENTelement += n;
@@ -130,7 +128,7 @@ int main(int argc, char *argv[])
 					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					*/
 					if (doIt == 1){
-						hateMyLifeSeconds = difftime(time(0),hateMyLifeEpoch);
+						clock_gettime(CLOCK_MONOTONIC, &tend1);
 					}
 					
 					// At the start of every new "page", it creates and opens a new file
@@ -247,8 +245,9 @@ int main(int argc, char *argv[])
 					fileLineCount++;
 					
 					if (doIt == 1){
-						hateMyLifeSecondssecond = difftime(time(0),hateMyLifeEpoch);
-						fprintf(stderr, "reading loop: %f\nAll the rest: %f\n", hateMyLifeSeconds, hateMyLifeSecondssecond);
+						clock_gettime(CLOCK_MONOTONIC, &tend2);
+						printf("Read: %.10f seconds\n", ((double)tend1.tv_sec + 1.0e-9*tend1.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
+						printf("Write: %.5f seconds\n", ((double)tend2.tv_sec + 1.0e-9*tend2.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
 						return 0;
 					}
 				}
