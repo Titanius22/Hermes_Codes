@@ -1,4 +1,4 @@
-//http://www.thegeekstuff.com/2011/12/c-socket-programming/?utm_source=feedburner
+//http://www.thegeekstuff.com/2011/12/c-socket-programming/
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 	char recvBuff[ RECV_BUFF_ARRAY_LENGTH ]; // one long array of recv data
 	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
 	unsigned short recvBuffRowLength[NUM_COL_RECV_BUFF_ARRAY];
-	unsigned char n = 1;
+	unsigned short n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 	
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	int fileCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
-	const char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
+	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
 	char fileName[] = "DistanceTestFULLER";
 	char fileExt[] = ".txt";
 	char fullFilePath[80];
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
 	char command[30] = "";
-	short offset;
+	short offset = 0;
 	unsigned short CounterRecvBuffArray = 0;
 	
 	unsigned short DataLineCounter;
@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 	unsigned short createNewFile = 1; // 1 yes, 0 no
 	unsigned short numFullTransmissions = 0;
 	unsigned short strikeCounter = 0;
+	unsigned short mathVarible = 0;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -108,12 +109,14 @@ int main(int argc, char *argv[])
 		
 			while (n > 0) 
 			{				
-				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement);
+				mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
+				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible);
 				if(n!=0){
 					strikeCounter = 0;
 					do{		
 						recvBuffCURRENTelement += n;
-					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
+						mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
+					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
 					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
 					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					*/
@@ -135,7 +138,7 @@ int main(int argc, char *argv[])
 					bufEpoch = time(0);
 					if(bufEpoch > (epochTimeSecondsTracking + DATA_TO_MOUNT_RATE)){
 						epochTimeSecondsTracking = bufEpoch;
-						offset = findOffset(recvBuff, LINE_LENGTH *4, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
+						offset = findOffset(recvBuff, LINE_LENGTH *3, LINE_LENGTH); // reads from the beginning of array since each array is about 1/4 second worth of data, the data at the front or end should be pretty similiar. looks through the first 4 line_length worth of data to find a match.
 						
 						//if(offset >= 0){
 						if(offset >= 0){
