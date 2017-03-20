@@ -15,7 +15,7 @@
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
-#include<pthread.h>
+#include <pthread.h>
 
 #define N_ELEMENT_INDEX 87 // (3*29-1)+1 bytes
 #define NEW_FILE_RATE 900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
@@ -33,7 +33,7 @@ int tryNewSocketConnection();
 short findOffset(char[] , short , short);
 //unsigned short getNumberOfFullElements(char (*)[ PACKET_LENGTH] , unsigned short , unsigned short , unsigned short, unsigned short * );
 void *readStuff(void *);
-void InitThreadStuff();
+int InitThreadStuff();
 
 //Globals
 int ServerFileNum;
@@ -50,7 +50,7 @@ unsigned short tempArrayLengths[ NUM_TEMP_ARRAYS ]; // the number of bytes that 
 unsigned char elementReadyToRead[ NUM_TEMP_ARRAYS ]; // 0 = no, 1 = yes, 2 = skip (if the read returned 0), keeps track of whether each array is ready to read
 unsigned char elementInUse[ NUM_TEMP_ARRAYS ]; // 0 = no, 1 = yes, keeps track of whether each array is being used or if the data within it has alread been read to the larger data array
 unsigned char nextElementToReadFrom; // holds the element of the tempArray (which array with in the tempArray array) that is to be read into the larger data array (recvBuff) next.
-unsigned char nextElementToSaveTo; // holds the element of the tempArray (which array with in the tempArray array) that read data is to be saved to next.
+int nextElementToSaveTo; // holds the element of the tempArray (which array with in the tempArray array) that read data is to be saved to next.
 unsigned int currentThread;
 unsigned char numberOfArraysSaves; //number of tempArrays saved to recvBuff. 3 will be the max value
 pthread_mutex_t elementReadyToReadLock; // lock for elementReadyToRead
@@ -105,6 +105,8 @@ int main(int argc, char *argv[])
 	unsigned short mathVarible = 0;
 	char * stringVarible;
 	unsigned short doIt = 0;
+	unsigned short tempElementInUse;
+	unsigned short tempElementReadyToRead;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -163,9 +165,9 @@ int main(int argc, char *argv[])
 					while(hitZero < 3){
 						do{
 							pthread_mutex_lock(&elementInUseLock);
-							mathVarible = elementInUse[nextElementToSaveTo]; // checks is the next array to save to is free to use.
+							tempElementInUse = elementInUse[nextElementToSaveTo]; // checks is the next array to save to is free to use.
 							pthread_mutex_unlock(&elementInUseLock);
-							if(mathVarible == 0 && currentThread <= 3){ // if array is not in use
+							if(tempElementInUse == 0 && currentThread <= 3){ // if array is not in use
 								pthread_create(&threadsForUse, NULL, readStuff, (void *)nextElementToSaveTo);
 								
 								pthread_mutex_lock(&currentThreadLock);
@@ -182,12 +184,12 @@ int main(int argc, char *argv[])
 								
 								nextElementToSaveTo = (nextElementToSaveTo+1)% NUM_TEMP_ARRAYS ;
 							}
-						}while((mathVarible == 0) && (hitZero < 3) && currentThread <= 3);
+						}while((tempElementInUse == 0) && (hitZero < 3) && currentThread <= 3);
 						do{
 							pthread_mutex_lock(&elementReadyToReadLock);
-							mathVarible = elementReadyToRead[nextElementToReadFrom]; // checks is the next array to save to is free to use.
+							tempElementReadyToRead = elementReadyToRead[nextElementToReadFrom]; // checks the array is ready to read.
 							pthread_mutex_unlock(&elementReadyToReadLock);
-							if(mathVarible == 1){ // if array is not in use						
+							if(tempElementReadyToRead == 1){ // if array is not in use						
 								// reads data from temp array to recvArray
 								strncat(&recvBuff[recvBuffCURRENTelement], &tempArray[nextElementToReadFrom][0], tempArrayLengths[nextElementToReadFrom]);
 								recvBuffCURRENTelement += tempArrayLengths[nextElementToReadFrom];
@@ -211,14 +213,14 @@ int main(int argc, char *argv[])
 									
 									numberOfArraysSaves = 0;
 								}
-							}else if(mathVarible == 2){
+							}else if(tempElementReadyToRead == 2){
 								pthread_mutex_lock(&elementInUseLock);
 								elementInUse[nextElementToSaveTo] = 0;
 								pthread_mutex_unlock(&elementInUseLock);
 								
 								nextElementToReadFrom = (nextElementToReadFrom+1)% NUM_TEMP_ARRAYS ;								
 							}
-						}while(mathVarible == 0);
+						}while(tempElementReadyToRead != 0); // if elementReadyToRead[nextElementToReadFrom] returns 0, the next element isn't read to be read so wait till next loop to try again
 					}
 					
 					// do{		
@@ -233,7 +235,7 @@ int main(int argc, char *argv[])
 						clock_gettime(CLOCK_MONOTONIC, &tend1);
 					}
 					
-					At the start of every new "page", it creates and opens a new file
+					////At the start of every new "page", it creates and opens a new file
 					// if (createNewFile == 1){
 						// sprintf(fileCounter, "%04d", fileCount);
 					
@@ -423,6 +425,8 @@ void *readStuff(void *elementNumber){
 		pthread_mutex_lock(&elementReadyToReadLock);
 		elementReadyToRead[elementNumberIn] = 1; // 1 = ready to read
 		pthread_mutex_unlock(&elementReadyToReadLock);
+		
+		tempArrayLengths[elementNumberIn] = nIn;
 	}
 	else {
 		pthread_mutex_lock(&elementReadyToReadLock);
@@ -439,11 +443,12 @@ void *readStuff(void *elementNumber){
 }
 
 
-void InitThreadStuff(){
+int InitThreadStuff(){
 	int i;
 	currentThread = 0;
 	hitZero = 0;
 	numberOfArraysSaves = 0;
+	int result = 0;
 	for(i=0;i< NUM_TEMP_ARRAYS ; i++){
 		elementReadyToRead[i] = 0; // 0 = no, 1 = yes, keeps track of whether each array is ready to read
 		elementInUse[i] = 0; // 0 = no, 1 = yes, keeps track of whether each array is being used or if the data within it has alread been read 
@@ -453,18 +458,19 @@ void InitThreadStuff(){
 	if (pthread_mutex_init(&elementReadyToReadLock, NULL) != 0)
     {
         printf("\n mutex init failed\n");
-        return 1;
+        result = 1;
     }
 	if (pthread_mutex_init(&elementInUseLock, NULL) != 0)
     {
         printf("\n mutex init failed\n");
-        return 1;
+        result = 1;
     }
 	if (pthread_mutex_init(&currentThreadLock, NULL) != 0)
     {
         printf("\n mutex init failed\n");
-        return 1;
+        result = 1;
     }
+	return result;	
 }
 
 
