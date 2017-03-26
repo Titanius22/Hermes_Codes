@@ -1,7 +1,4 @@
 //http://www.thegeekstuff.com/2011/12/c-socket-programming/
-//http://www.geeksforgeeks.org/multithreading-c-2/
-//http://www.thegeekstuff.com/2012/05/c-mutex-examples/
-//http://stackoverflow.com/questions/9218709/multiple-threads-accessing-same-multi-dimensional-array //whether or not to use locks
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -15,7 +12,6 @@
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
-#include <pthread.h>
 
 #define N_ELEMENT_INDEX 87 // (3*29-1)+1 bytes
 #define NEW_FILE_RATE 900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
@@ -24,7 +20,6 @@
 #define PACKET_LENGTH 87 //3*29
 #define NUM_COL_RECV_BUFF_ARRAY 55
 #define RECV_BUFF_ARRAY_LENGTH 4785
-#define NUM_TEMP_ARRAYS 6
 
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
@@ -32,8 +27,6 @@ void insertBytesFromInt(void* , unsigned char** , short);
 int tryNewSocketConnection();
 short findOffset(char[] , short , short);
 //unsigned short getNumberOfFullElements(char (*)[ PACKET_LENGTH] , unsigned short , unsigned short , unsigned short, unsigned short * );
-void *readStuff(void *);
-int InitThreadStuff();
 
 //Globals
 int ServerFileNum;
@@ -42,23 +35,6 @@ unsigned short startingSocketNum; // = 5000;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
 char SocketNumFileData[5];
 FILE *SocketNumFile;
-unsigned short n = 1;
-
-//Globals for Multi-threading reading
-char tempArray[ NUM_TEMP_ARRAYS ][1500]; // the temporary arrays the thread will save the data read too
-unsigned short tempArrayLengths[ NUM_TEMP_ARRAYS ]; // the number of bytes that was saves to the array each array
-unsigned char elementReadyToRead[ NUM_TEMP_ARRAYS ]; // 0 = no, 1 = yes, 2 = skip (if the read returned 0), keeps track of whether each array is ready to read
-unsigned char elementInUse[ NUM_TEMP_ARRAYS ]; // 0 = no, 1 = yes, keeps track of whether each array is being used or if the data within it has alread been read to the larger data array
-unsigned char nextElementToReadFrom; // holds the element of the tempArray (which array with in the tempArray array) that is to be read into the larger data array (recvBuff) next.
-int nextElementToSaveTo; // holds the element of the tempArray (which array with in the tempArray array) that read data is to be saved to next.
-unsigned int currentThread;
-unsigned char numberOfArraysSaves; //number of tempArrays saved to recvBuff. 3 will be the max value
-pthread_mutex_t elementReadyToReadLock; // lock for elementReadyToRead
-pthread_mutex_t elementInUseLock; // lock for elementInUse
-pthread_mutex_t currentThreadLock; // lock for currentThread
-pthread_mutex_t hitZeroLock; // lock for hitZero
-pthread_t threadsForUse;
-unsigned char hitZero;
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -72,6 +48,7 @@ int main(int argc, char *argv[])
 	char recvBuff[ RECV_BUFF_ARRAY_LENGTH ]; // one long array of recv data
 	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
 	unsigned short recvBuffRowLength[NUM_COL_RECV_BUFF_ARRAY];
+	unsigned short n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 	
@@ -105,8 +82,6 @@ int main(int argc, char *argv[])
 	unsigned short mathVarible = 0;
 	char * stringVarible;
 	unsigned short doIt = 0;
-	unsigned short tempElementInUse;
-	unsigned short tempElementReadyToRead;
 	
 	// I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -130,8 +105,6 @@ int main(int argc, char *argv[])
 	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 	
-	InitThreadStuff();
-	
 	while(1){ 
 		
 		// If connection was made properly
@@ -141,12 +114,21 @@ int main(int argc, char *argv[])
 			{				
 				mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
 				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible);
-				recvBuffCURRENTelement += n;
-				if(n > 0){
+				if(n!=0){
 					strikeCounter = 0;
 					if (DataLineCounter > 2000){
 						doIt = 1;
 						clock_gettime(CLOCK_MONOTONIC, &tstart);
+					}
+					do{		
+						recvBuffCURRENTelement += n;
+						mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
+					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
+					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
+					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
+					*/
+					if (doIt == 1){
+						clock_gettime(CLOCK_MONOTONIC, &tend1);
 					}
 					
 					// At the start of every new "page", it creates and opens a new file
@@ -161,92 +143,6 @@ int main(int argc, char *argv[])
 						filePointer = fopen(fullFilePath, "a");
 						createNewFile = 0;
 					}
-					
-					while(hitZero < 3){
-						do{
-							pthread_mutex_lock(&elementInUseLock);
-							tempElementInUse = elementInUse[nextElementToSaveTo]; // checks is the next array to save to is free to use.
-							pthread_mutex_unlock(&elementInUseLock);
-							if(tempElementInUse == 0 && currentThread <= 3){ // if array is not in use
-								pthread_create(&threadsForUse, NULL, readStuff, (void *)nextElementToSaveTo);
-								
-								pthread_mutex_lock(&currentThreadLock);
-								currentThread++;
-								pthread_mutex_unlock(&currentThreadLock);
-								
-								pthread_mutex_lock(&elementReadyToReadLock);
-								elementReadyToRead[nextElementToSaveTo] = 0;
-								pthread_mutex_unlock(&elementReadyToReadLock);
-								
-								pthread_mutex_lock(&elementInUseLock);
-								elementInUse[nextElementToSaveTo] = 1;
-								pthread_mutex_unlock(&elementInUseLock);
-								
-								nextElementToSaveTo = (nextElementToSaveTo+1)% NUM_TEMP_ARRAYS ;
-							}
-						}while((tempElementInUse == 0) && (hitZero < 3) && currentThread <= 3);
-						do{
-							pthread_mutex_lock(&elementReadyToReadLock);
-							tempElementReadyToRead = elementReadyToRead[nextElementToReadFrom]; // checks the array is ready to read.
-							pthread_mutex_unlock(&elementReadyToReadLock);
-							if(tempElementReadyToRead == 1){ // if array is not in use						
-								// reads data from temp array to recvArray
-								strncat(&recvBuff[recvBuffCURRENTelement], &tempArray[nextElementToReadFrom][0], tempArrayLengths[nextElementToReadFrom]);
-								recvBuffCURRENTelement += tempArrayLengths[nextElementToReadFrom];
-								
-								pthread_mutex_lock(&elementReadyToReadLock);
-								elementReadyToRead[nextElementToSaveTo] = 0;
-								pthread_mutex_unlock(&elementReadyToReadLock);
-								
-								pthread_mutex_lock(&elementInUseLock);
-								elementInUse[nextElementToSaveTo] = 0;
-								pthread_mutex_unlock(&elementInUseLock);
-								
-								nextElementToReadFrom = (nextElementToReadFrom+1)% NUM_TEMP_ARRAYS ;
-								
-								numberOfArraysSaves++;
-								
-								if(numberOfArraysSaves >= 3 || hitZero >= 3){ //after 3 temp array are saved to recvBuff or if there is no more new data to read, write it to the SD card.
-									fwrite(&recvBuff[0], recvBuffCURRENTelement, 1, filePointer);
-									fflush(filePointer);
-									recvBuffCURRENTelement = 0;
-									
-									numberOfArraysSaves = 0;
-								}
-							}else if(tempElementReadyToRead == 2){
-								pthread_mutex_lock(&elementInUseLock);
-								elementInUse[nextElementToSaveTo] = 0;
-								pthread_mutex_unlock(&elementInUseLock);
-								
-								nextElementToReadFrom = (nextElementToReadFrom+1)% NUM_TEMP_ARRAYS ;								
-							}
-						}while(tempElementReadyToRead != 0); // if elementReadyToRead[nextElementToReadFrom] returns 0, the next element isn't read to be read so wait till next loop to try again
-					}
-					
-					// do{		
-						// recvBuffCURRENTelement += n;
-						// mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
-					// }while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible)) > 0); 
-					/* The order of the conditional statement matters. If the first condition fails it will not check the 
-					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
-					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
-					*/
-					if (doIt == 1){
-						clock_gettime(CLOCK_MONOTONIC, &tend1);
-					}
-					
-					////At the start of every new "page", it creates and opens a new file
-					// if (createNewFile == 1){
-						// sprintf(fileCounter, "%04d", fileCount);
-					
-						// strcpy(fullFilePath, filepath);
-						// strcat(fullFilePath, fileName);
-						////strcpy(fullFilePath, mostFilePath);
-						// strcat(fullFilePath, fileCounter);
-						// strcat(fullFilePath, fileExt);
-						// filePointer = fopen(fullFilePath, "a");
-						// createNewFile = 0;
-					// }
 					
 					// Sends data to the mount
 					bufEpoch = time(0);
@@ -326,9 +222,9 @@ int main(int argc, char *argv[])
 					if (createNewFile == 0){
 						
 						// WRITES DATA to the document unconverted
-						///////fwrite(&recvBuff[0], recvBuffCURRENTelement, 1, filePointer);
-						///////fflush(filePointer);
-						///////recvBuffCURRENTelement = 0;
+						fwrite(&recvBuff[0], recvBuffCURRENTelement, 1, filePointer);
+						fflush(filePointer);
+						recvBuffCURRENTelement = 0;
 						//fclose(filePointer);
 						//filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 						
@@ -351,7 +247,7 @@ int main(int argc, char *argv[])
 					if (doIt == 1){
 						clock_gettime(CLOCK_MONOTONIC, &tend2);
 						printf("Read: %.10f seconds\n", ((double)tend1.tv_sec + 1.0e-9*tend1.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
-						printf("Write: %.10f seconds\n", ((double)tend2.tv_sec + 1.0e-9*tend2.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
+						printf("Write: %.5f seconds\n", ((double)tend2.tv_sec + 1.0e-9*tend2.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
 						return 0;
 					}
 				}
@@ -413,64 +309,6 @@ short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 		i++;
 	}
 	return result;
-}
-
-void *readStuff(void *elementNumber){
-	int elementNumberIn;
-	unsigned short nIn;
-	elementNumberIn = (int)elementNumber;
-	nIn = read(ServerFileNum, &tempArray[elementNumberIn][0], 1448);
-	
-	if(nIn != 0){
-		pthread_mutex_lock(&elementReadyToReadLock);
-		elementReadyToRead[elementNumberIn] = 1; // 1 = ready to read
-		pthread_mutex_unlock(&elementReadyToReadLock);
-		
-		tempArrayLengths[elementNumberIn] = nIn;
-	}
-	else {
-		pthread_mutex_lock(&elementReadyToReadLock);
-		elementReadyToRead[elementNumberIn] = 2; // 2 = skip (because it read 0)
-		pthread_mutex_unlock(&elementReadyToReadLock);
-		
-		pthread_mutex_lock(&hitZeroLock);
-		hitZero++; // zero bytes was read from socket
-		pthread_mutex_unlock(&hitZeroLock);
-	}
-	pthread_mutex_lock(&currentThreadLock);
-	currentThread--; // thread has ended so the thread count is decremented 
-	pthread_mutex_unlock(&currentThreadLock);
-}
-
-
-int InitThreadStuff(){
-	int i;
-	currentThread = 0;
-	hitZero = 0;
-	numberOfArraysSaves = 0;
-	int result = 0;
-	for(i=0;i< NUM_TEMP_ARRAYS ; i++){
-		elementReadyToRead[i] = 0; // 0 = no, 1 = yes, keeps track of whether each array is ready to read
-		elementInUse[i] = 0; // 0 = no, 1 = yes, keeps track of whether each array is being used or if the data within it has alread been read 
-		nextElementToReadFrom = 0; // holds the element of the tempArray (which array with in the tempArray array) that is to be read into the larger data array (recvBuff) next.
-		nextElementToSaveTo = 0; // holds the element of the tempArray (which array within the tempArray array) that the read() data is to be saved to next.
-	}
-	if (pthread_mutex_init(&elementReadyToReadLock, NULL) != 0)
-    {
-        printf("\n mutex init failed\n");
-        result = 1;
-    }
-	if (pthread_mutex_init(&elementInUseLock, NULL) != 0)
-    {
-        printf("\n mutex init failed\n");
-        result = 1;
-    }
-	if (pthread_mutex_init(&currentThreadLock, NULL) != 0)
-    {
-        printf("\n mutex init failed\n");
-        result = 1;
-    }
-	return result;	
 }
 
 
@@ -569,3 +407,4 @@ void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytes
   }
   *byteStart+=(short)numberBytesToCopy;
 }
+
