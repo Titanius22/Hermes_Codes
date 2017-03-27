@@ -45,8 +45,8 @@ unsigned long age;
 float balloonLat              = 40;//34.28889;//[degrees]
 float balloonLon              = 50;//91.6458;//[degrees]
 float balloonAlt              = 60;//10064.0;///5280.0;//[miles]
-unsigned long long loloballoonLat             = 10;//34.28889;//[degrees] /////////////////////////////////////////////////////FIX THIS lolo
-unsigned long long loloballoonLon             = 20;//91.6458;//[degrees]
+unsigned long longballoonLat             = 10;//34.28889;//[degrees] /////////////////////////////////////////////////////FIX THIS long
+unsigned long longballoonLon             = 20;//91.6458;//[degrees]
 unsigned long longballoonAlt             = 30;//10064.0;///5280.0;//[miles]
 
 
@@ -123,32 +123,46 @@ void loop() {
     
     updateCharsToSend();
     
-	  loloballoonLat = (unsigned long) (balloonLat*100000);
-	  loloballoonLon = (unsigned long) (balloonLon*100000);
+	  longballoonLat = (unsigned long) (balloonLat*10000);
+	  longballoonLon = (unsigned long) (balloonLon*10000);
 	  longballoonAlt = (unsigned long) (balloonAlt*100);
 	  
+	  writeArray=CharsToSend;
+	  wrPtr=&writeArray;
+    
+    Serial.println((unsigned int)getIntFromByte(wrPtr,2));
+  
+    Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+  
+    Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+  
+    Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+  
+    Serial.println((unsigned int)getIntFromByte(wrPtr,2));
+  
+    Serial.println((unsigned int)getIntFromByte(wrPtr,2));
 	  
-	  
-	//  writeArray=CharsToSend;
-	//  wrPtr=&writeArray;
-
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-	//
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-	//  
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-	//
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-	//
-	//  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
-	//  
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-	//
-	//  Serial.println((char)getIntFromByte(wrPtr,1));
-	//
-	//  Serial.println((char)getIntFromByte(wrPtr,1));
-	//
-	//  Serial.println((char)getIntFromByte(wrPtr,1));
+	  Serial.println((unsigned short)getIntFromByte(wrPtr,1));
+  
+    Serial.println((unsigned short)getIntFromByte(wrPtr,1));
+  
+    Serial.println((unsigned short)getIntFromByte(wrPtr,1));
+  
+    Serial.println((unsigned short)getIntFromByte(wrPtr,1));
+  
+    Serial.println((unsigned short)getIntFromByte(wrPtr,1));
+  
+    Serial.println((unsigned short)getIntFromByte(wrPtr,1));
+  
+    Serial.println((unsigned long)getIntFromByte(wrPtr,3));
+	
+	  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
+	
+	  Serial.println((char)getIntFromByte(wrPtr,1));
+	
+	  Serial.println((char)getIntFromByte(wrPtr,1));
+	
+	  Serial.println((char)getIntFromByte(wrPtr,1));
 	  
 	  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
 	  //lineCount++; // increments in updateCharsToSend
@@ -202,12 +216,14 @@ void updateCharsToSend(){
 	insertBytesFromInt(&intBuflineCount, &writeTo, 2);
 
 	//Latitude * 10^5 positive only----------------should be 10^10-----------
-	//longBuflatitude = (unsigned long long)(balloonLat * 100000);
-	insertBytesFromInt(&loloballoonLat, &writeTo, 3);
+	//longballoonLat = (unsigned long)(balloonLat * 100000);
+  Serial.print("balloon lat: ");
+  //Serial.println((long)longballoonLat);
+	insertBytesFromInt(&longballoonLat, &writeTo, 3);
 
 	//Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
 	//longBuflongitude = (unsigned long long)(balloonLon * 100000);
-	insertBytesFromInt(&loloballoonLon, &writeTo, 3);
+	insertBytesFromInt(&longballoonLon, &writeTo, 3);
 
 	//Altitude * 100--------------------------------------------
 	//long intBufaltitude = 1000 * 100;

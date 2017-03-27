@@ -87,16 +87,18 @@ int main(int argc, char *argv[])
 			
 			
 			if(counter%700 == 0){
-				/*
+				
 				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 				if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
-					strncpy(recvBuf, i2cDataPrechecked, dataLineLength);
+					for(i=0;i<dataLineLength;i++){
+						recvBuf[i] = i2cDataPrechecked[i];
+					}
 					TripleData();
 				}
 				else{
 					printf("i2cData dropped");
 				}
-				*/
+				
 				
 				if(counter%1400 == 0){
 					GPSLocCounter++;
