@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 	int i;
 	packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
 	GPStimeNanoSec = (1.0) * 1.0e9; // (time in seconds)
+	double mathVarible;
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
 		while (connectionError >= 0){
 			
 			clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
-			if((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
+			if(((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
 				
 				// reset clock
 				clock_gettime(CLOCK_MONOTONIC, &GPSstart);
@@ -145,10 +146,10 @@ int main(int argc, char *argv[])
 			}
 			
 			//controls amount of data sent to the send buffer. Controls data overflow. Forces Max data speed
-			clock_gettime(CLOCK_MONOTONIC, &RFstop);
-			while((RFstop.tv_nsec - RFstart.tv_nsec) < packetTimeNanoSec){
+			while{
 				clock_gettime(CLOCK_MONOTONIC, &RFstop); //taking new time measurement
-			}
+				mathVarible = (RFstop.tv_nsec + RFstop.tv_sec*1.0e9) - (RFstart.tv_nsec + RFstart.tv_sec*1.0e9);
+			}do(mathVarible < packetTimeNanoSec);
 			clock_gettime(CLOCK_MONOTONIC, &RFstart); //starting clock over again
 			
 			// update counter
