@@ -14,6 +14,9 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
+////////////RF SPEED IN bps////////////////
+#define RF_SPEED 85000
+
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
@@ -31,7 +34,7 @@ static const char *devName = "/dev/i2c-1";
 static const char *SocketNumFileName = "SocketNumber.txt";
 
 //Globals
-char recvBuf[100];
+char recvBuf[500];
 unsigned short startingSocketNum;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
 FILE *SocketNumFile;
@@ -41,6 +44,10 @@ unsigned int counter = 1;
 int i2cReadStatus;
 short dataLineLength = 29;
 short testNum = 0;
+unsigned int packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
+int numberLinesToSend = 10;
+
+
 
 
 int main(int argc, char *argv[])
@@ -49,6 +56,8 @@ int main(int argc, char *argv[])
 	short connectionError;
 	char i2cDataPrechecked[33];
 	short GPSLocCounter = 0;
+	struct timespec tstart={0,0}, tend1={0,0}, tend2={0,0};
+	
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -83,6 +92,7 @@ int main(int argc, char *argv[])
     {
         tryNewSocketConnection();
 		connectionError = 0;
+		clock_gettime(CLOCK_MONOTONIC, &tstart);
 		while (connectionError >= 0){
 			
 			
@@ -93,7 +103,7 @@ int main(int argc, char *argv[])
 					for(i=0;i<dataLineLength;i++){
 						recvBuf[i] = i2cDataPrechecked[i];
 					}
-					TripleData();
+					TripleData(10);
 				}
 				else{
 					printf("i2cData dropped");
@@ -110,52 +120,58 @@ int main(int argc, char *argv[])
 				}
 			}
 			
+			//controls amount of data sent to the send buffer. Controls data overflow. Forces Max data speed
+			clock_gettime(CLOCK_MONOTONIC, &tend1);
+			while((tend1.tv_nsec - tstart.tv_nsec) < packetTimeNanoSec){
+				clock_gettime(CLOCK_MONOTONIC, &tend1); //taking new time measurement
+			}
+			clock_gettime(CLOCK_MONOTONIC, &tstart); //starting clock over again
 			
 			//send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
-			connectionError = send(ServerFileNum, recvBuf, dataLineLength*3, MSG_NOSIGNAL); 
+			connectionError = send(ServerFileNum, recvBuf, dataLineLength*10, MSG_NOSIGNAL); 
 			
 			counter++;
 			updateLineCounter();
 			
 			
-			/*if(counter%200 == 0){
+			if(counter%500 == 0){
 				unsigned char* writeArray=recvBuf;
 				unsigned char** wrPtr=&writeArray;
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 			
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 
-				printf("%c", (char)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
 
-				printf("%c", (char)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
 
-				printf("%c\n", (char)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%c\n", (char)getIntFromByte(wrPtr,1));
 			}
-			*/	
 			
 		
 			//printf("%s\n", buf);
@@ -297,21 +313,19 @@ void SetNewData(short pick){
 	recvBuf[dataLineLength-2] = 'N';
 	recvBuf[dataLineLength-1] = 'D';
 	
-	// repeat data for the second 2 lines of the 87 byte (3 x 29) transmission
-	int i;
-	for(i=0;i<dataLineLength;i++){
-		recvBuf[i+dataLineLength] = recvBuf[i];
-		recvBuf[i+(dataLineLength*2)] = recvBuf[i];
-	}
+	// copy first line to all other lines
+	TripleData();
 }
 
 
 void TripleData(){
-	short i;
+	int i;
+	int j;
 	// repeat data for the second 2 lines of the 96 byte (3 x 32) transmission
 	for(i=0;i<dataLineLength;i++){
-		recvBuf[i+dataLineLength] = recvBuf[i];
-		recvBuf[i+(dataLineLength*2)] = recvBuf[i];
+		for(j=0;j<(numberLinesToSend-1);j++){
+			recvBuf[i+(dataLineLength*j)] = recvBuf[i];
+		}
 	}
 }
 
