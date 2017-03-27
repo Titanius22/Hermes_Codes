@@ -44,7 +44,8 @@ unsigned int counter = 1;
 int i2cReadStatus;
 short dataLineLength = 29;
 short testNum = 0;
-unsigned int packetTimeNanoSec;
+double packetTimeNanoSec;
+double GPStimeNanoSec;
 int numberLinesToSend = 10;
 
 
@@ -56,10 +57,10 @@ int main(int argc, char *argv[])
 	short connectionError;
 	char i2cDataPrechecked[33];
 	short GPSLocCounter = 0;
-	struct timespec tstart={0,0}, tend1={0,0}, tend2={0,0};
+	struct timespec RFstart={0,0}, RFstop={0,0}, GPSstart={0,0}, GPSstop={0,0};
 	int i;
 	packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
-	
+	GPStimeNanoSec = (1.0) * 1.0e9; // (time in seconds)
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -92,26 +93,46 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        tryNewSocketConnection();
+        // start clocks
+		clock_gettime(CLOCK_MONOTONIC, &RFstart);
+		clock_gettime(CLOCK_MONOTONIC, &GPSstart);
+		
+		// try to make a connection
+		tryNewSocketConnection();
 		connectionError = 0;
-		clock_gettime(CLOCK_MONOTONIC, &tstart);
+		
 		while (connectionError >= 0){
 			
-			
-			if(counter%700 == 0){
+			clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
+			if((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
 				
+				// reset clock
+				clock_gettime(CLOCK_MONOTONIC, &GPSstart);
+				
+				// keeps reading till a good message gets through
 				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
-				if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
-					for(i=0;i<dataLineLength;i++){
-						recvBuf[i] = i2cDataPrechecked[i];
-					}
-					TripleData(10);
-				}
-				else{
+				while(!CheckSumMatches(i2cDataPrechecked, dataLineLength)){
 					printf("i2cData dropped");
+					i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 				}
 				
+				// copies the data 				
+				for(i=0;i<dataLineLength;i++){
+					recvBuf[i] = i2cDataPrechecked[i];
+				}
+				TripleData(10);
 				
+				// if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
+				//	 for(i=0;i<dataLineLength;i++){
+				//		 recvBuf[i] = i2cDataPrechecked[i];
+				//	 }
+				//	 TripleData(10);
+				// }
+				// else{
+				//	 printf("i2cData dropped");
+				// }
+				
+				/*
 				if(counter%1400 == 0){
 					GPSLocCounter++;
 					if (GPSLocCounter > 23){
@@ -120,20 +141,23 @@ int main(int argc, char *argv[])
 					
 					SetNewData(GPSLocCounter);
 				}
+				*/
 			}
 			
 			//controls amount of data sent to the send buffer. Controls data overflow. Forces Max data speed
-			clock_gettime(CLOCK_MONOTONIC, &tend1);
-			while((tend1.tv_nsec - tstart.tv_nsec) < packetTimeNanoSec){
-				clock_gettime(CLOCK_MONOTONIC, &tend1); //taking new time measurement
+			clock_gettime(CLOCK_MONOTONIC, &RFstop);
+			while((RFstop.tv_nsec - RFstart.tv_nsec) < packetTimeNanoSec){
+				clock_gettime(CLOCK_MONOTONIC, &RFstop); //taking new time measurement
 			}
-			clock_gettime(CLOCK_MONOTONIC, &tstart); //starting clock over again
+			clock_gettime(CLOCK_MONOTONIC, &RFstart); //starting clock over again
+			
+			// update counter
+			updateLineCounter();
 			
 			//send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
 			connectionError = send(ServerFileNum, recvBuf, dataLineLength*10, MSG_NOSIGNAL); 
 			
 			counter++;
-			updateLineCounter();
 			
 			
 			if(counter%500 == 0){
@@ -335,6 +359,7 @@ void TripleData(){
 void updateLineCounter(){
 	
 	unsigned char* writeTo=recvBuf;
+	int i;
 	
 	//Line counter-------------------------------------------
 	insertBytesFromInt(&counter, &writeTo, 2);
@@ -345,6 +370,11 @@ void updateLineCounter(){
 	
 	recvBuf[(dataLineLength*2)] = recvBuf[0];
 	recvBuf[(dataLineLength*2)+1] = recvBuf[1];
+	
+	for(i=1;i<(numberLinesToSend);i++){
+		recvBuf[(dataLineLength*i)] = recvBuf[0];
+		recvBuf[(dataLineLength*i)+1] = recvBuf[1];
+	}
 }
 
 
