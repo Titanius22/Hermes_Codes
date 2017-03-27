@@ -44,7 +44,7 @@ unsigned int counter = 1;
 int i2cReadStatus;
 short dataLineLength = 29;
 short testNum = 0;
-unsigned int packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
+unsigned int packetTimeNanoSec;
 int numberLinesToSend = 10;
 
 
@@ -57,6 +57,8 @@ int main(int argc, char *argv[])
 	char i2cDataPrechecked[33];
 	short GPSLocCounter = 0;
 	struct timespec tstart={0,0}, tend1={0,0}, tend2={0,0};
+	int i;
+	packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
 	
 	
 	//I2C STUFF. setting up i2c for communication
