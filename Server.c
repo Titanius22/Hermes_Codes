@@ -164,8 +164,8 @@ int main(int argc, char *argv[])
 			// tries to send data, if available space in buffer is less than the data length, the loop will keep trying to send till the buffer clears up enough to send it.
 			// send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
 			do{
-				sendBuffCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_NOSIGNAL);
-				startElementForSending += sendBuffCounter;
+				bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_NOSIGNAL);
+				startElementForSending += bytesSentCounter;
 			}while(startElementForSending < totalBytesToSend);
 			counter++;
 			
