@@ -62,6 +62,9 @@ int main(int argc, char *argv[])
 	packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
 	GPStimeNanoSec = (1.0) * 1.0e9; // (time in seconds)
 	double mathVarible;
+	int bytesSentCounter = 0;
+	int startElementForSending = 0;
+	int totalBytesToSend = dataLineLength*10;
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -95,7 +98,7 @@ int main(int argc, char *argv[])
     while(1)
     {
         // start clocks
-		clock_gettime(CLOCK_MONOTONIC, &RFstart);
+		//clock_gettime(CLOCK_MONOTONIC, &RFstart);
 		clock_gettime(CLOCK_MONOTONIC, &GPSstart);
 		
 		// try to make a connection
@@ -145,19 +148,25 @@ int main(int argc, char *argv[])
 				*/
 			}
 			
-			//controls amount of data sent to the send buffer. Controls data overflow. Forces Max data speed
-			while{
+			/* //controls amount of data sent to the send buffer. Controls data overflow. Forces Max data speed
+			do{
 				clock_gettime(CLOCK_MONOTONIC, &RFstop); //taking new time measurement
 				mathVarible = (RFstop.tv_nsec + RFstop.tv_sec*1.0e9) - (RFstart.tv_nsec + RFstart.tv_sec*1.0e9);
-			}do(mathVarible < packetTimeNanoSec);
-			clock_gettime(CLOCK_MONOTONIC, &RFstart); //starting clock over again
+			}while(mathVarible < packetTimeNanoSec);
+			clock_gettime(CLOCK_MONOTONIC, &RFstart); //starting clock over again 
+			*/
 			
 			// update counter
 			updateLineCounter();
 			
-			//send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
-			connectionError = send(ServerFileNum, recvBuf, dataLineLength*10, MSG_NOSIGNAL); 
 			
+			startElementForSending = 0;
+			// tries to send data, if available space in buffer is less than the data length, the loop will keep trying to send till the buffer clears up enough to send it.
+			// send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
+			do{
+				sendBuffCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_NOSIGNAL);
+				startElementForSending += sendBuffCounter;
+			}while(startElementForSending < totalBytesToSend);
 			counter++;
 			
 			
