@@ -14,6 +14,9 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
+////////////RF SPEED IN bps////////////////
+#define RF_SPEED 85000
+
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
@@ -31,7 +34,7 @@ static const char *devName = "/dev/i2c-1";
 static const char *SocketNumFileName = "SocketNumber.txt";
 
 //Globals
-char recvBuf[100];
+char recvBuf[500];
 unsigned short startingSocketNum;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
 FILE *SocketNumFile;
@@ -41,6 +44,11 @@ unsigned int counter = 1;
 int i2cReadStatus;
 short dataLineLength = 29;
 short testNum = 0;
+double packetTimeNanoSec;
+double GPStimeNanoSec;
+int numberLinesToSend = 10;
+
+
 
 
 int main(int argc, char *argv[])
@@ -49,6 +57,14 @@ int main(int argc, char *argv[])
 	short connectionError;
 	char i2cDataPrechecked[33];
 	short GPSLocCounter = 0;
+	struct timespec RFstart={0,0}, RFstop={0,0}, GPSstart={0,0}, GPSstop={0,0};
+	int i;
+	packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
+	GPStimeNanoSec = (1.0) * 1.0e9; // (time in seconds)
+	double mathVarible;
+	int bytesSentCounter = 0;
+	int startElementForSending = 0;
+	int totalBytesToSend = dataLineLength*10;
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -81,23 +97,46 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        tryNewSocketConnection();
+        // start clocks
+		//clock_gettime(CLOCK_MONOTONIC, &RFstart);
+		clock_gettime(CLOCK_MONOTONIC, &GPSstart);
+		
+		// try to make a connection
+		tryNewSocketConnection();
 		connectionError = 0;
+		
 		while (connectionError >= 0){
 			
-			
-			if(counter%700 == 0){
-				/*
-				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
-				if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
-					strncpy(recvBuf, i2cDataPrechecked, dataLineLength);
-					TripleData();
-				}
-				else{
-					printf("i2cData dropped");
-				}
-				*/
+			clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
+			if(((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
 				
+				// reset clock
+				clock_gettime(CLOCK_MONOTONIC, &GPSstart);
+				
+				// keeps reading till a good message gets through
+				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
+				while(!CheckSumMatches(i2cDataPrechecked, dataLineLength)){
+					printf("i2cData dropped");
+					i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
+				}
+				
+				// copies the data 				
+				for(i=0;i<dataLineLength;i++){
+					recvBuf[i] = i2cDataPrechecked[i];
+				}
+				TripleData(10);
+				
+				// if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
+				//	 for(i=0;i<dataLineLength;i++){
+				//		 recvBuf[i] = i2cDataPrechecked[i];
+				//	 }
+				//	 TripleData(10);
+				// }
+				// else{
+				//	 printf("i2cData dropped");
+				// }
+				
+				/*
 				if(counter%1400 == 0){
 					GPSLocCounter++;
 					if (GPSLocCounter > 23){
@@ -106,54 +145,69 @@ int main(int argc, char *argv[])
 					
 					SetNewData(GPSLocCounter);
 				}
+				*/
 			}
 			
+			/* //controls amount of data sent to the send buffer. Controls data overflow. Forces Max data speed
+			do{
+				clock_gettime(CLOCK_MONOTONIC, &RFstop); //taking new time measurement
+				mathVarible = (RFstop.tv_nsec + RFstop.tv_sec*1.0e9) - (RFstart.tv_nsec + RFstart.tv_sec*1.0e9);
+			}while(mathVarible < packetTimeNanoSec);
+			clock_gettime(CLOCK_MONOTONIC, &RFstart); //starting clock over again 
+			*/
 			
-			//send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
-			connectionError = send(ServerFileNum, recvBuf, dataLineLength*3, MSG_NOSIGNAL); 
-			
-			counter++;
+			// update counter
 			updateLineCounter();
 			
 			
-			/*if(counter%200 == 0){
+			startElementForSending = 0;
+			// tries to send data, if available space in buffer is less than the data length, the loop will keep trying to send till the buffer clears up enough to send it.
+			// send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
+			do{
+				bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_NOSIGNAL);
+				startElementForSending += bytesSentCounter;
+			}while(startElementForSending < totalBytesToSend);
+			counter++;
+			
+			
+			if(counter%500 == 0){
 				unsigned char* writeArray=recvBuf;
 				unsigned char** wrPtr=&writeArray;
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 			
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 		  
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,3));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 				
-				printf("%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
 
-				printf("%c", (char)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
 
-				printf("%c", (char)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
 
-				printf("%c\n", (char)getIntFromByte(wrPtr,1));
+				fprintf(stderr, "%c\n", (char)getIntFromByte(wrPtr,1));
 			}
-			*/	
 			
 		
 			//printf("%s\n", buf);
@@ -295,21 +349,19 @@ void SetNewData(short pick){
 	recvBuf[dataLineLength-2] = 'N';
 	recvBuf[dataLineLength-1] = 'D';
 	
-	// repeat data for the second 2 lines of the 87 byte (3 x 29) transmission
-	int i;
-	for(i=0;i<dataLineLength;i++){
-		recvBuf[i+dataLineLength] = recvBuf[i];
-		recvBuf[i+(dataLineLength*2)] = recvBuf[i];
-	}
+	// copy first line to all other lines
+	TripleData();
 }
 
 
 void TripleData(){
-	short i;
+	int i;
+	int j;
 	// repeat data for the second 2 lines of the 96 byte (3 x 32) transmission
 	for(i=0;i<dataLineLength;i++){
-		recvBuf[i+dataLineLength] = recvBuf[i];
-		recvBuf[i+(dataLineLength*2)] = recvBuf[i];
+		for(j=0;j<(numberLinesToSend-1);j++){
+			recvBuf[i+(dataLineLength*j)] = recvBuf[i];
+		}
 	}
 }
 
@@ -317,6 +369,7 @@ void TripleData(){
 void updateLineCounter(){
 	
 	unsigned char* writeTo=recvBuf;
+	int i;
 	
 	//Line counter-------------------------------------------
 	insertBytesFromInt(&counter, &writeTo, 2);
@@ -327,6 +380,11 @@ void updateLineCounter(){
 	
 	recvBuf[(dataLineLength*2)] = recvBuf[0];
 	recvBuf[(dataLineLength*2)+1] = recvBuf[1];
+	
+	for(i=1;i<(numberLinesToSend);i++){
+		recvBuf[(dataLineLength*i)] = recvBuf[0];
+		recvBuf[(dataLineLength*i)+1] = recvBuf[1];
+	}
 }
 
 

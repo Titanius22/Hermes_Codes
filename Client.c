@@ -19,7 +19,7 @@
 #define LINE_LENGTH 29
 #define PACKET_LENGTH 87 //3*29
 #define NUM_COL_RECV_BUFF_ARRAY 55
-#define RECV_BUFF_ARRAY_LENGTH 4785
+#define RECV_BUFF_ARRAY_LENGTH 2896
 
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
