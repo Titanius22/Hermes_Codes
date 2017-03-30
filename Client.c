@@ -117,10 +117,6 @@ int main(int argc, char *argv[])
 				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible);
 				if(n!=0){
 					strikeCounter = 0;
-					if (DataLineCounter > 2000){
-						doIt = 1;
-						clock_gettime(CLOCK_MONOTONIC, &tstart);
-					}
 					do{		
 						recvBuffCURRENTelement += n;
 						mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
@@ -128,9 +124,6 @@ int main(int argc, char *argv[])
 					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
 					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					*/
-					if (doIt == 1){
-						clock_gettime(CLOCK_MONOTONIC, &tend1);
-					}
 					
 					// At the start of every new "page", it creates and opens a new file
 					if (createNewFile == 1){
@@ -246,13 +239,6 @@ int main(int argc, char *argv[])
 					}				
 					
 					fileLineCount++;
-					
-					if (doIt == 1){
-						clock_gettime(CLOCK_MONOTONIC, &tend2);
-						printf("Read: %.10f seconds\n", ((double)tend1.tv_sec + 1.0e-9*tend1.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
-						printf("Write: %.5f seconds\n", ((double)tend2.tv_sec + 1.0e-9*tend2.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
-						return 0;
-					}
 				}
 				
 				if(n==0){
