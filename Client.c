@@ -56,11 +56,12 @@ int main(int argc, char *argv[])
 	int fileCount = 1;
 	int fileLineCount = 1;
 	char fileCounter[8];
-	char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
-	char fileName[] = "DistanceTestFULLER";
-	char fileExt[] = ".txt";
+	//char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
+	//char fileName[] = "DistanceTestFULLER";
+	//char fileExt[] = ".txt";
 	char fullFilePath[80];
-	//char fullFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL.txt";;
+	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL";
+	int mostFilePathLength = 63;
 	FILE *filePointer;
 	unsigned char* writeArray;
 	unsigned char** wrPtr;
@@ -135,11 +136,13 @@ int main(int argc, char *argv[])
 					if (createNewFile == 1){
 						sprintf(fileCounter, "%04d", fileCount);
 					
-						strcpy(fullFilePath, filepath);
-						strcat(fullFilePath, fileName);
-						//strcpy(fullFilePath, mostFilePath);
-						strcat(fullFilePath, fileCounter);
-						strcat(fullFilePath, fileExt);
+						//strcpy(fullFilePath, filepath);
+						//strcat(fullFilePath, fileName);
+						strcpy(fullFilePath, mostFilePath);
+						strcpy(&fullFilePath[mostFilePathLength], fileCounter);
+						
+						//strcat(fullFilePath, fileCounter);
+						//strcat(fullFilePath, fileExt);
 						filePointer = fopen(fullFilePath, "a");
 						createNewFile = 0;
 					}
