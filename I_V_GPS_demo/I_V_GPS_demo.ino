@@ -43,12 +43,15 @@ TinyGPS gps;
 
 // for GPS------------------------------------------------------------------------------------------
 unsigned long age;
-float balloonLat              = 40;//34.28889;//[degrees]
-float balloonLon              = 50;//91.6458;//[degrees]
-float balloonAlt              = 60;//10064.0;///5280.0;//[miles]
-unsigned long long loloballoonLat             = 10;//34.28889;//[degrees] /////////////////////////////////////////////////////FIX THIS lolo
-unsigned long long loloballoonLon             = 20;//91.6458;//[degrees]
-unsigned long longballoonAlt             = 30;//10064.0;///5280.0;//[miles]
+//float balloonLat              = 40;//34.28889;//[degrees]
+//float balloonLon              = 50;//91.6458;//[degrees]
+//float balloonAlt              = 60;//10064.0;///5280.0;//[miles]
+long longBalloonLat             = 10;//34.28889;//[degrees] /////////////////////////////////////////////////////FIX THIS lolo
+long longBalloonLon             = 20;//91.6458;//[degrees]
+long longBalloonAlt             = 30;//10064.0;///5280.0;//[miles]
+unsigned long longBalloonTime   = 40;
+unsigned long longBalloonDate   = 50;
+
 
 // for Housekeeping------------------------------------------------------------------------------------------
 unsigned char Vcount;
@@ -125,10 +128,11 @@ void loop() {
   
   if(newdata){
     
-	  loloballoonLat = (unsigned long) (balloonLat*100000);
-	  loloballoonLon = (unsigned long) (balloonLon*100000);
-	  longballoonAlt = (unsigned long) (balloonAlt*100);
-	  
+	  // longBalloonLat = (unsigned long) (longBalloonLat*100000);
+	  // longlongBalloonLon = (unsigned long) (longBalloonLon*100000);
+	  // longBalloonAlt = (unsigned long) (longBalloonAlt*100);
+	  // longBalloonTime = (unsigned long) (balloonTime*100);
+	  	updateCharsToSend();
 	  
 	  
 	//  writeArray=CharsToSend;
@@ -156,14 +160,18 @@ void loop() {
 	  //lineCount++; // increments in updateCharsToSend
   }
   
-	updateCharsToSend();
+
 
 	Serial.print("LAT: ");
-	Serial.println(balloonLat);
+	Serial.println(longBalloonLat);
 	Serial.print("LON: ");
-	Serial.println(balloonLon);
+	Serial.println(longBalloonLon);
 	Serial.print("ALT: ");
-	Serial.println(balloonAlt);
+	Serial.println(longBalloonAlt);
+	Serial.print("DATE: ");
+	Serial.println(longBalloonDate);
+	Serial.print("TIME: ");
+	Serial.println(longBalloonTime);
 	Serial.println("");
   
 	delay(500);
@@ -206,20 +214,20 @@ void updateCharsToSend(){
 	insertBytesFromInt(&intBuflineCount, &writeTo, 2);
 
 	//Latitude * 10^5 positive only----------------should be 10^10-----------
-	//longBuflatitude = (unsigned long long)(balloonLat * 100000);
-	insertBytesFromInt(&loloballoonLat, &writeTo, 3);
+	//longBuflatitude = (unsigned long long)(longBalloonLat * 100000);
+	insertBytesFromInt(&longBalloonLat, &writeTo, 3);
 
 	//Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
-	//longBuflongitude = (unsigned long long)(balloonLon * 100000);
-	insertBytesFromInt(&loloballoonLon, &writeTo, 3);
+	//longBuflongitude = (unsigned long long)(longBalloonLon * 100000);
+	insertBytesFromInt(&longBalloonLon, &writeTo, 3);
 
 	//Altitude * 100--------------------------------------------
 	//long intBufaltitude = 1000 * 100;
-	insertBytesFromInt(&longballoonAlt, &writeTo, 3);
+	insertBytesFromInt(&longBalloonAlt, &writeTo, 3);
 	
 	//Time (seconds since UTC half day) --------------------------------------------
-	unsigned int intBuftemperature1 = 450;
-	insertBytesFromInt(&intBuftemperature1, &writeTo, 2);
+	unsigned int longBalloonTime = 450;
+	insertBytesFromInt(&longBalloonTime, &writeTo, 2);
 
 	//Thermistor count------------------------------------------
 	unsigned int intBuftemperature = 450;
@@ -290,10 +298,10 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 	short loopCount;
 	for(loopCount=0;loopCount<bytes;loopCount++){
 
-	//Copying bytes from one array to the other
-	if(loopCount<bytes){
-	  intPtr[loopCount]=(*arrayStart)[loopCount];
-	}
+		//Copying bytes from one array to the other
+		if(loopCount<bytes){
+		  intPtr[loopCount]=(*arrayStart)[loopCount];
+		}
 	}
 	*arrayStart+=(short)bytes;
 	temp=*((unsigned long long*)intPtr);
@@ -317,7 +325,8 @@ void GPSstuff() {
 		//using GPS ------------------------------------------------------------------------------------------
 		Serial.println("LOCKED ON");
 		//Serial.print("Balloon Altitude: ");
-		balloonAlt = gps.altitude(); 
+		
+		
 	}else{          // if not locked
 		Serial.println("Not Locked");
 	}
@@ -325,11 +334,9 @@ void GPSstuff() {
 
 // Get and process GPS data
 void gpsdump(TinyGPS &gps) {
-	//unsigned long age;
-	gps.f_get_position(&balloonLat, &balloonLon, &age);
-	//Serial.print(balloonLat, 4); 
-	//Serial.print(", "); 
-	//Serial.println(balloonLon, 4);
+	longBalloonAlt = gps.altitude();
+	gps.get_position(&longBalloonLat, &longBalloonLon, &age);
+	gps.get_datetime(&longBalloonDate, &longBalloonTime, &age);
 }
 
 // Feed data as it becomes available 
