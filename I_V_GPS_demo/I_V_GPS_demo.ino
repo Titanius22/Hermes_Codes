@@ -336,7 +336,9 @@ void GPSstuff() {
 void gpsdump(TinyGPS &gps) {
 	longBalloonAlt = gps.altitude();
 	gps.get_position(&longBalloonLat, &longBalloonLon, &age);
+  longBalloonLon = -longBalloonLon;
 	gps.get_datetime(&longBalloonDate, &longBalloonTime, &age);
+	timeConvert(longBalloonTime);
 }
 
 // Feed data as it becomes available 
@@ -380,30 +382,22 @@ void houseKeeping() {
 	Icount = (unsigned char) Iread;
 }
 
-// void initial(uint8_t address)
-// {
-// Serial.println();
-// Serial.println("PROM COEFFICIENTS ivan");
-// Wire.beginTransmission(address);
-// Wire.write(0x1E); // reset
-// Wire.endTransmission();
- 
-// delay(10);
-// for (int i=0; i<6  ; i++) {
-  // Wire.beginTransmission(address);
-  // Wire.write(0xA2 + (i * 2));
-  // Wire.endTransmission();
-  // Wire.beginTransmission(address);
-  // Wire.requestFrom(address, (uint8_t) 6);
-  // delay(1);
-  // if(Wire.available())
-  // {
-     // C[i+1] = Wire.read() << 8 | Wire.read();
-  // }
-  // else {
-    // Serial.println("Error reading PROM 1"); // error reading the PROM or communicating with the device
-  // }
-  // Serial.println(C[i+1]);
-// }
-// Serial.println();
-// }
+// Converts time from UTC hhmmsscc to the number of seconds since the last UTC half day (resets to 0 every 12 hours)
+void timeConvert(unsigned long &timeVar){
+	unsigned long buffVar = timeVar;
+	unsigned short hours;
+	unsigned short minutes;
+	unsigned short seconds;
+	
+	buffVar = buffVar/100; // removes centi-seconds
+	
+	seconds = buffVar%100; // gets seconds
+	buffVar = buffVar/100; // removes seconds
+	
+	minutes = buffVar%100; // gets minutes
+	buffVar = buffVar/100; // removes minutes
+	
+	hours = buffVar%12; // only hours left, max of 24.
+	
+	timeVar = seconds + (60*minutes) + (3600*hours);
+}
