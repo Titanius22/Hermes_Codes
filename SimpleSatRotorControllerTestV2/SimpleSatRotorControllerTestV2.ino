@@ -139,7 +139,7 @@ long _closeEnough = 500;   // tolerance for az-el match in rotor move in degrees
 long _closeEnoughSmoothing = 1000;   // if within this range (degree * 100), increase pausing between moves to limit current surges
 
 //Values for calculations
-const float Re = 3956.0; //[miles]
+const float Re = 6378;//[km] 3956.0; //[miles]
 const float pi = 3.14159265359; 
 float distancefromballoontoGS = 0;   
                                 //ICI//COA//KENNEL CLUB//TEST
@@ -288,7 +288,7 @@ void loop()
 			Serial.println(balloonLat,6);
 			Serial.print("(deg) Balloon Lon     : ");
 			Serial.println(balloonLon,6);
-			Serial.print("(deg) Balloon Altitude: ");
+			Serial.print("(meters) Balloon Altit: ");
 			Serial.println(balloonAlt,6);
 
 			Serial.print("(deg) GS Lat          : ");
@@ -331,7 +331,6 @@ void loop()
 					do{
 						if(i == 0){
 							CommandChar = Wire.read();
-							Serial.println(CommandChar);
 							switch(CommandChar){
 								case '1':{ // Changes GS GPS
 									loopCommand = Command1Length;
@@ -358,7 +357,9 @@ void loop()
 							} 
 							case '2':{ // Changes Balloon GPS
 								Command2inBinary[i] = Wire.read();
-								Serial.println("case 2b");
+                Serial.print(i);
+                Serial.print("----");
+								Serial.println(Command2inBinary[i], HEX);
 								break;
 							} 
 							case '3':{ //Asks for Az and El
@@ -404,7 +405,11 @@ void loop()
 					balloonLat = ((float)RecievedDataArray[0])/100000;
 					balloonLon = ((float)RecievedDataArray[1])/100000;
 					//balloonAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles
-					balloonAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles 
+					balloonAlt = (((float)RecievedDataArray[2]))/100; //centimeters to hundreds to miles 
+          Serial.println(RecievedDataArray[2]);
+          Serial.println(RecievedDataArray[2]);
+          Serial.println(RecievedDataArray[2]);
+          Serial.println(RecievedDataArray[2]);
 				}
 				if(Command3){
 					/////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -414,6 +419,8 @@ void loop()
 					/////////////////////////////////////////////DO STUFF///////////////////////////////////////////////////////////////////////
 					////////////////////////////////////////////////////////DO STUFF////////////////////////////////////////////////////////////
 				}
+
+       
        
 				Serial.print("balloonLat: ");
 				Serial.println(balloonLat);
@@ -441,7 +448,7 @@ void loop()
          
          if ( (abs(_rotorAzimuth - _newAzimuth) > _closeEnough) && _azimuthMove ) { // see if azimuth move is required
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-            Serial.println("-SHOULD MOVE-");
+            Serial.println("-SHOULD MOVE-!");
             
             updateAzimuthMove();
 
@@ -591,7 +598,8 @@ void updateAzimuthMove()
 //
 void readElevation()
 {
-   long sensorValue = analogRead(_elevationInputPin);
+   //long sensorValue = analogRead(_elevationInputPin);
+   long sensorValue = averageRead(_elevationInputPin);
    _rotorElevation = ((sensorValue * 10000) / _elScaleFactor) - _elAdZeroOffset;
 }
 
@@ -601,8 +609,25 @@ void readElevation()
 //
 void readAzimuth()
 {
-  long sensorValue = analogRead(_azimuthInputPin);
+  //long sensorValue = analogRead(_azimuthInputPin);
+  long sensorValue = averageRead(_azimuthInputPin);
   _rotorAzimuth = ((sensorValue * 10000) / _azScaleFactor) - _azAdZeroOffset;
+}
+
+
+//
+// read azimuth from G5500
+//
+long averageRead(byte _InputPin)
+{
+  //long sensorValue = analogRead(_azimuthInputPin);
+  int range = 100;//NUMBER OF SAMPLES TO AVERAGE TOGETHER
+  long sensorValue = 0;
+  for (int i=0; i < range; i++){
+    sensorValue = sensorValue + analogRead(_InputPin);
+   } 
+   sensorValue = (sensorValue/range);
+  return sensorValue;
 }
 
 
@@ -731,8 +756,9 @@ float findAzimuth(float balloonLon, float balloonLat, float groundStationlon, fl
 // calculates Elevation from ground station to balloon
 float findElevation(float balloonAlt, float groundStationAlt, float d) {
   float el;  // ground station = 1  // balloon = 2
-  //el = asin(((balloonAlt - groundStationAlt)/d) - (d/(2.0*Re)));
-  el = atan(((balloonAlt - groundStationAlt)/(d)) - (d/(2.0*Re)));
+  el = (atan((balloonAlt - groundStationAlt)/(d))) - (d/(Re));
+  Serial.println("d: ");
+  Serial.println(d);
   return el;
 }
 
@@ -740,10 +766,16 @@ String CreateCommand(float balloonLon, float balloonLat, float balloonAlt, float
   String command;
   float d, Azimuth, Elevation;
   
-  balloonLat = (balloonLat*pi)/180;              //[radian]
-  balloonLon = (balloonLon*pi)/180;              //[radian]
-  groundStationlat = (groundStationlat*pi)/180;  //[radian]
-  groundStationlon = (groundStationlon*pi)/180;  //[radian]
+  balloonLat = (balloonLat*pi)/180;              //[deg -> radian]
+  balloonLon = (balloonLon*pi)/180;              //[deg -> radian]
+  groundStationlat = (groundStationlat*pi)/180;  //[deg -> radian]
+  groundStationlon = (groundStationlon*pi)/180;  //[deg -> radian]
+  Serial.println("[meters] groundStationAlt: ");
+  Serial.println(groundStationAlt);
+  groundStationAlt = groundStationAlt/1000;   //[m -> km]
+  balloonAlt = balloonAlt/1000;   //[m -> km]
+  Serial.println("[miles] groundStationAlt: ");
+  Serial.println(groundStationAlt);
       
   d = findDistance(balloonLon, balloonLat, groundStationlon, groundStationlat);
   
@@ -751,7 +783,10 @@ String CreateCommand(float balloonLon, float balloonLat, float balloonAlt, float
   Azimuth = (Azimuth*180)/pi;
 
   Elevation = findElevation(balloonAlt, groundStationAlt, d);
-  Elevation = (Elevation*180)/pi;
+  Elevation = abs((Elevation*180)/pi);
+  Serial.println("EL: ");
+  Serial.println(Elevation);
+  
   command = "W";
   if (Azimuth <= 9){
     command = command + "00" + String(int(Azimuth)) + " ";
@@ -807,9 +842,9 @@ void insertBytesFromInt(long int value,unsigned char** byteStart, short numberBy
 }
 
 void convertBinaryCommands(String strBinaryCommand, short len, unsigned long returnedData[3]){
-	char buf[35];
-	strBinaryCommand.toCharArray(buf, len);
-	
+	char buf[11];
+	strBinaryCommand.toCharArray(buf, len+1); //The +1 is because the toCharArray() function returns an end line and the last element of the length. It needs to return 333\0 or 10 bytes.
+  
 	char* writeArray=buf;
 	char** wrPtr=&writeArray;
 	returnedData[0] = (unsigned long)getIntFromByte(wrPtr,3);

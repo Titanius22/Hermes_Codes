@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	int i;
 	int other;
 	packetsToSend = ((dataSpeed*transmitTime)/(8*dataLineLength)) +1; // +1 because the vaues always round down
-    FILE *f = fopen("fakeData.bin", "w+");
+    FILE *f = fopen("fakeData.bin", "wb+");
 	printf("%d\n", packetsToSend);
 	if (f == NULL)
 	{
@@ -197,7 +197,7 @@ void TripleData(){
 	int j;
 	// repeat data for the second 2 lines of the 96 byte (3 x 32) transmission
 	for(i=0;i<dataLineLength;i++){
-		for(j=0;j<(numberLinesToSend-1);j++){
+		for(j=1;j<(numberLinesToSend);j++){
 			buffer[i+(dataLineLength*j)] = buffer[i];
 		}
 	}
