@@ -128,7 +128,7 @@ void loop() {
 	GPSstuff();
 	houseKeeping();
 	updateCharsToSend();
-	//updateCharsToSend();
+
   
   //if(newdata){
     
@@ -343,7 +343,7 @@ void GPSstuff() {
 void gpsdump(TinyGPS &gps) {
 	longBalloonAlt = gps.altitude();
 	gps.get_position(&longBalloonLat, &longBalloonLon, &age);
-  longBalloonLon = -longBalloonLon;
+  	longBalloonLon = -longBalloonLon;
 	gps.get_datetime(&longBalloonDate, &longBalloonTime, &age);
 	timeConvert(longBalloonTime);
 }
