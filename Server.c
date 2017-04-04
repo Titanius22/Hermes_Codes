@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 	
 	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////
-	SetNewData(GPSLocCounter);
+	//SetNewData(GPSLocCounter);
 	/////////////////////////////////////////////////////////REMOVE AFTER TEST////////////////////////////////////////////////////////////
 
     while(1)
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 				for(i=0;i<dataLineLength;i++){
 					recvBuf[i] = i2cDataPrechecked[i];
 				}
-				TripleData(10);
+				TripleData(numberLinesToSend);
 				
 				// if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
 				//	 for(i=0;i<dataLineLength;i++){
@@ -304,7 +304,7 @@ void SetNewData(short pick){
 	insertBytesFromInt(&(intBufaltitude[pick]), &writeTo, 3);
 	
 	//Time(secs since UTC half day)--------------------------------------------
-	unsigned int intBufTime = 1000;
+	unsigned int intBufTime = 450;
 	insertBytesFromInt(&intBufTime, &writeTo, 2);
 
 	//Thermistor count------------------------------------------
@@ -375,12 +375,6 @@ void updateLineCounter(){
 	insertBytesFromInt(&counter, &writeTo, 2);
 	
 	// repeat data for the second 2 lines of the 87 byte (3 x 29) transmission
-	recvBuf[dataLineLength] = recvBuf[0];
-	recvBuf[dataLineLength+1] = recvBuf[1];
-	
-	recvBuf[(dataLineLength*2)] = recvBuf[0];
-	recvBuf[(dataLineLength*2)+1] = recvBuf[1];
-	
 	for(i=1;i<(numberLinesToSend);i++){
 		recvBuf[(dataLineLength*i)] = recvBuf[0];
 		recvBuf[(dataLineLength*i)+1] = recvBuf[1];
@@ -449,12 +443,14 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
    //Loop Counter
   short loopCount;
-  for(loopCount=0;loopCount<bytes;loopCount++){
+  for(loopCount=0;loopCount<sizeof(unsigned long);loopCount++){
 
     //Copying bytes from one array to the other
     if(loopCount<bytes){
       intPtr[loopCount]=(*arrayStart)[loopCount];
-    }
+    }else{
+            intPtr[loopCount]=0;
+        }
   }
   *arrayStart+=(short)bytes;
   temp=*((unsigned long*)intPtr);

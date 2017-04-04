@@ -296,12 +296,14 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
 	//Loop Counter
 	short loopCount;
-	for(loopCount=0;loopCount<bytes;loopCount++){
+	for(loopCount=0;loopCount<sizeof(unsigned long);loopCount++){
 
 		//Copying bytes from one array to the other
 		if(loopCount<bytes){
 		  intPtr[loopCount]=(*arrayStart)[loopCount];
-		}
+		}else{
+            intPtr[loopCount]=0;
+        }
 	}
 	*arrayStart+=(short)bytes;
 	temp=*((unsigned long long*)intPtr);
@@ -359,8 +361,8 @@ void houseKeeping() {
 
 	Vread = round(analogRead(analogPinV)/4);    // read the input pin
 	Iread = round(analogRead(analogPinI)/4);    // read the input pin
-	double Vvoltread = (5*Vread)/256;    // read the input pin
-	double Ivoltread = (5*Iread)/256;    // read the input pin
+	double Vvoltread = (5*Vread)/255;    // read the input pin
+	double Ivoltread = (5*Iread)/255;    // read the input pin
 	double Vin = 3.2206*Vvoltread - 0.086;    // read the input pin
 	double Iin = 0.1116*Ivoltread - 0.0009;    // read the input pin
 
