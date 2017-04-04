@@ -83,16 +83,18 @@ unsigned char** wrPtr=&writeArray;
 
 bool newdata = false;
 unsigned short LineLength = 29; //excludes checksum byte
+int64_t start;
 
 void setup() {
 	// for communication with Pi
 	Wire.begin(4);
 
-
-	//for GPS------------------------------------------------------------------------------------------
 	Serial.begin(74880);
+	
+	//for GPS------------------------------------------------------------------------------------------
 	Serial1.begin(9600);                     // Communicate at 9600 baud (default for PAM-7Q module)
-
+	
+	
 	delay(200);
 
 	// for Sensor------------------------------------------------------------------------------------------
@@ -109,10 +111,12 @@ void setup() {
 	Wire.onRequest(requestEvent); // register event
 
 	updateCharsToSend();
-  
+	
+	start = millis();       // starts a count of millisec since the code began  
 }
 
 void loop() {
+	
 	//Serial.print((char) CharsToSend[0]);
 	//Serial.print((char) CharsToSend[1]);
 	//Serial.print((char) CharsToSend[2]);
@@ -123,16 +127,16 @@ void loop() {
 	//delay(1000);
 	GPSstuff();
 	houseKeeping();
-
+	updateCharsToSend();
 	//updateCharsToSend();
   
-  if(newdata){
+  //if(newdata){
     
 	  // longBalloonLat = (unsigned long) (longBalloonLat*100000);
 	  // longlongBalloonLon = (unsigned long) (longBalloonLon*100000);
 	  // longBalloonAlt = (unsigned long) (longBalloonAlt*100);
 	  // longBalloonTime = (unsigned long) (balloonTime*100);
-	  	updateCharsToSend();
+	  	
 	  
 	  
 	//  writeArray=CharsToSend;
@@ -158,7 +162,7 @@ void loop() {
 	  
 	  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
 	  //lineCount++; // increments in updateCharsToSend
-  }
+  //}
   
 
 
@@ -313,9 +317,10 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 }
 
 void GPSstuff() {
-	int64_t start = millis();       // starts a count of millisec since the code began 
 	newdata = false;
-	while (millis() - start < 250) {     // Update every 1 seconds
+	int64_t hack = millis();
+	if (hack - start > 250) {     // Update every 1 seconds
+		start = hack;
 		if (feedgps()){                    // if serial1 is available and can read gps.encode
 			newdata = true;
 		}

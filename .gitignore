@@ -49,3 +49,4 @@ Temporary Items
 *.o
 fakeData.bin
 *.log
+csvData.csv
