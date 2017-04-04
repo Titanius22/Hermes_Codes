@@ -24,7 +24,7 @@ int main () {
     long mathVar;
     long lastGoodEnd = -1;
 
-    pFile = fopen ( "fakeData.bin" , "r" );
+    pFile = fopen ( "DistanceTestFULL0001" , "rb" );
     if (pFile==NULL) {fputs ("File error",stderr); exit (1);}
 
     csvFile = fopen ( "csvData.csv" , "w+" );
@@ -51,9 +51,7 @@ int main () {
         }
         else if(result == 0){
             //while(feof(pFile)){
-                //printf("readCounter: %d\n", readCounter);
                 buffer[readCounter] = fgetc(pFile);
-                //printf("buffer char: %c\n", buffer[readCounter]);
                 fseek (pFile , 1 , SEEK_CUR);
                 readCounter++;
                 result = 1;
@@ -69,21 +67,25 @@ int main () {
     //printf("%c %c %c", buffer[readCounter-3], buffer[readCounter-2], buffer[readCounter-1]);
 
     // put data into csv format
-    for(bufferIndex=0; bufferIndex < readCounter; bufferIndex++){
+    int numGoodLines=0;
+    for(bufferIndex=0; bufferIndex < readCounter-2; bufferIndex++){
         //printf("%c\n", buffer[bufferIndex]);
         if((buffer[bufferIndex] == 'E') && (buffer[bufferIndex+1] == 'N') && (buffer[bufferIndex+2] == 'D')){
             if((bufferIndex+2) < lineLength){
                 mathVar = bufferIndex - (lineLength - 3);
                 writeLine(mathVar);
                 lastGoodEnd = bufferIndex+2;
+                numGoodLines++;
             }else if((buffer[bufferIndex-lineLength] == 'E') && (buffer[bufferIndex+1-lineLength] == 'N') && (buffer[bufferIndex+2-lineLength] == 'D')){
                 mathVar = bufferIndex - (lineLength - 3);
                 writeLine(mathVar);
                 lastGoodEnd = bufferIndex+2;
+                //printf("Got line\n");
+                numGoodLines++;
             }else{
                 /*
 
-                do something with the data from buffer[lastGoodEnd+1] to buffer[bufferIndex+2]
+                do sombufferething with the data from buffer[lastGoodEnd+1] to buffer[bufferIndex+2]
                 lastGoodEnd = bufferIndex+2;
 
                 */
@@ -102,16 +104,19 @@ int main () {
 void writeLine(long mathVar){
     unsigned char* writeArray;
 	unsigned char** wrPtr;
-	unsigned int DataLineCounter;
+	unsigned int DataLineCounter =0;
 	unsigned int DataGPS[4];
 	unsigned int DataSensors[9];
 	char DataEndLine[3];
 
-    writeArray = buffer;
+    writeArray = &buffer[mathVar];
     wrPtr=&writeArray;
 
+    //printf("%x %x %x %x %x\n", writeArray[0], writeArray[1], writeArray[2], writeArray[3], writeArray[4]);
+
     DataLineCounter = (unsigned int)getIntFromByte(wrPtr,2);
-    //printf("%d ", DataLineCounter); // Line Counter
+    //printf("%x\n", getIntFromByte(wrPtr,2)); // Line Counter
+    //printf("%x\n", DataLineCounter); // Line Counter
 
     DataGPS[0] = (unsigned int)getIntFromByte(wrPtr,3);
     //printf("%d ", DataGPS[0]); // Longitude
@@ -161,40 +166,49 @@ void writeLine(long mathVar){
     DataEndLine[2] = (char)getIntFromByte(wrPtr,1);
     //printf("%c\n", DataEndLine[2]); // 'D'
 
-    fprintf(csvFile, "%d,%d,%d,%d,%d,%d,%d%d,%d,%d,%d,%d,%d,%d,%c,%c,%c\n", DataLineCounter, DataGPS[0], DataGPS[1], DataGPS[2], DataGPS[3], DataSensors[0], DataSensors[1], DataSensors[2], DataSensors[3], DataSensors[4], DataSensors[5], DataSensors[6], DataSensors[7], DataSensors[8], DataEndLine[0], DataEndLine[1], DataEndLine[2]);
+    //printf("%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%c,%c,%c\n", DataLineCounter, DataGPS[0], DataGPS[1], DataGPS[2], DataGPS[3], DataSensors[0], DataSensors[1], DataSensors[2], DataSensors[3], DataSensors[4], DataSensors[5], DataSensors[6], DataSensors[7], DataSensors[8], DataEndLine[0], DataEndLine[1], DataEndLine[2]);
+    fprintf(csvFile, "%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%c,%c,%c\n", DataLineCounter, DataGPS[0], DataGPS[1], DataGPS[2], DataGPS[3], DataSensors[0], DataSensors[1], DataSensors[2], DataSensors[3], DataSensors[4], DataSensors[5], DataSensors[6], DataSensors[7], DataSensors[8], DataEndLine[0], DataEndLine[1], DataEndLine[2]);
 }
 
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
-  //Allocating array to read into
-  char* intPtr = malloc (sizeof(unsigned long));
-  unsigned long temp;
-  //Void pointer to same location to return
+    //Allocating array to read into
+    char* intPtr = malloc (sizeof(unsigned long));
+    unsigned long temp = 0;
+    //Void pointer to same location to return
 
-   //Loop Counter
-  short loopCount;
-  for(loopCount=0;loopCount<bytes;loopCount++){
+    //printf("%x   --   ", temp); // Line Counter
 
-    //Copying bytes from one array to the other
-    if(loopCount<bytes){
-      intPtr[loopCount]=(*arrayStart)[loopCount];
+    //Loop Counter
+    short loopCount;
+    for(loopCount=0;loopCount<sizeof(unsigned long);loopCount++){
+
+        //Copying bytes from one array to the other
+        if(loopCount<bytes){
+            intPtr[loopCount]=(*arrayStart)[loopCount];
+
+        }else{
+            intPtr[loopCount]=0;
+        }
+
     }
-  }
-  *arrayStart+=(short)bytes;
-  temp=*((unsigned long*)intPtr);
-  free(intPtr);
-  //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
-  return temp;
+    *arrayStart+=(short)bytes;
+    temp = *((unsigned long*)intPtr);
+    free(intPtr);
+    //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
+
+    //printf("%x\n", temp); // Line Counter
+    return temp;
 }
 
 void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytesToCopy){
 
-  unsigned char* valueBytes=value;
-  short loopCount=0;
-  for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
-    (*byteStart)[loopCount]=valueBytes[loopCount];
-  }
-  *byteStart+=(short)numberBytesToCopy;
+    unsigned char* valueBytes=value;
+    short loopCount=0;
+    for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
+        (*byteStart)[loopCount]=valueBytes[loopCount];
+    }
+    *byteStart+=(short)numberBytesToCopy;
 }
 
 
