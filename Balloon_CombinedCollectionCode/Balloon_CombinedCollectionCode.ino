@@ -256,41 +256,43 @@ void GPSstuff() {
 
 
 void SENSORstuff() {
-    D1 = getVal(ADDRESS, 0x48); // Pressure raw
-    D2 = getVal(ADDRESS, 0x58);// Temperature raw
-    // dT   = D2 - (C[5]*(2^8));
-    dT   = D2 - ((uint32_t)C[5] << 8); //Difference between actual and reference temperature
-    OFF  = ((int64_t)C[2] << 16) + ((dT * C[4]) >> 7); //Offset at actual temperature
-    SENS = ((int32_t)C[1] << 15) + ((dT * C[3]) >> 8); //Sensitivity at actual temperature
-    TEMP = (((int64_t)dT * (int64_t)C[6]) >> 23) + 2000; //Actual temperature
-    if(TEMP < 2000) // if temperature lower than 20 Celsius 
-    {
-      int32_t T1    = 0;
-      int64_t OFF1  = 0;
-      int64_t SENS1 = 0;
-      T1    = pow(dT, 2) / 2147483648;
-      OFF1  = 5 * pow((TEMP - 2000), 2) / 2;
-      SENS1 = 5 * pow((TEMP - 2000), 2) / 4;
-      if(TEMP < -1500) // if temperature lower than -15 Celsius 
-      {
-        OFF1  = OFF1 + 7 * pow((TEMP + 1500), 2); 
-        SENS1 = SENS1 + 11 * pow((TEMP + 1500), 2) / 2;
-      }
-      TEMP -= T1;
-      OFF -= OFF1; 
-      SENS -= SENS1;
-    }
-    //double Temperature = (float)TEMP / 100;
-    Temperature_cC = TEMP + 6000;
-    P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
-    //double Pressure = (float)P / 100;
-    Pressure_dP = P;
-    //Serial.print("Temperature = ");
-    //Serial.print(Temperature_cC);
-    //Serial.print("      Actual Pressure = ");
-    //Serial.print(Pressure);
-    //Serial.print("      Pressure_dP = ");
-    //Serial.println(Pressure_dP);
+  // Tempurature and pressure good
+ D1 = getVal(ADDRESS, 0x48); // Pressure raw
+ D2 = getVal(ADDRESS, 0x58);// Temperature raw
+ // dT   = D2 - (C[5]*(2^8));
+ dT   = D2 - ((uint32_t)C[5] << 8); //Difference between actual and reference temperature 
+ //OFF  = ((int64_t)C[2] << 17) + ((dT * C[4]) >> 6);
+ OFF  = ((int64_t)C[2] << 16) + ((dT * C[4]) >> 7); //Offset at actual temperature
+ //SENS = ((int32_t)C[1] << 16) + ((dT * C[3]) >> 7);
+ SENS = ((int32_t)C[1] << 15) + ((dT * C[3]) >> 8); //Sensitivity at actual temperature
+ //TEMP = (((int64_t)dT * (int64_t)C[6]) >> 23) + 2000;//Actual temperature
+ TEMP = (int64_t)dT * (int64_t)C[6] / 8388608 + 2000; //Actual temperature
+ if(TEMP < 2000) // if temperature lower than 20 Celsius 
+ {
+   int32_t T1    = 0;
+   int64_t OFF1  = 0;
+   int64_t SENS1 = 0;
+   T1    = pow(dT, 2) / 2147483648;
+   OFF1  = 5 * pow((TEMP - 2000), 2) / 2;
+   SENS1 = 5 * pow((TEMP - 2000), 2) / 4;
+   if(TEMP < -1500) // if temperature lower than -15 Celsius 
+   {
+     OFF1  = OFF1 + 7 * pow((TEMP + 1500), 2); 
+     SENS1 = SENS1 + 11 * pow((TEMP + 1500), 2) / 2;
+   }
+   TEMP -= T1;
+   OFF -= OFF1; 
+   SENS -= SENS1;
+ }
+ float Temperature = (float)TEMP / 100; 
+ //P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 32768;
+ P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
+ float Pressure = (float)P / 100;
+ Serial.print("Actual TEMP= ");
+ Serial.println(Temperature);
+ Serial.print("Actual PRESSURE= ");
+ Serial.println(Pressure);
+ Serial.println("");
 }
 
 // Get and process GPS data

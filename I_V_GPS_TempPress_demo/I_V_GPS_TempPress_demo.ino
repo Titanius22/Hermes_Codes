@@ -68,6 +68,8 @@ int32_t P = 0;
 uint16_t C[7];
 unsigned int Temperature_cC; //RealTemp +60C (to remove negative) then *10^2 to get temp in centiCelsius. 
 unsigned long Pressure_dP; //in decaPascels *10^2;
+float Temp;
+float Pressure;
 
 //For sending
 char endLine[3] = {'E', 'N', 'D'};
@@ -98,14 +100,14 @@ void setup() {
   PORTC |= (1 << 5);
   delay(100);
   
-  //initial(ADDRESS);
+  initial(ADDRESS);
   //GPSstuff(); 
   //SENSORstuff();
   //updateCharsToSend();
   
   Wire.onRequest(requestEvent); // register event
   
-  updateCharsToSend();
+  //updateCharsToSend();
   
 }
 
@@ -119,7 +121,7 @@ void loop() {
   
   //delay(1000);
   GPSstuff();
-  houseKeeping();
+  HOUSEKEEPINGstuff();
   SENSORstuff();
 
   //updateCharsToSend();
@@ -189,7 +191,7 @@ void loop() {
   double Pressure = (float)P / 100;
 
   Serial.print("Temperature = ");
-  Serial.println(Temperature_cC);
+  Serial.println(Temp);
   Serial.print("Pressure = ");
   Serial.println(Pressure);
 
@@ -370,7 +372,7 @@ bool feedgps() {
 }
 
 // Feed data as it becomes available 
-void houseKeeping() {
+void HOUSEKEEPINGstuff() {
   int analogPinV = 0;     // potentiometer wiper (middle terminal) connected to analog pin 3outside leads to ground and +5V
   int analogPinI = 1; 
   double Vread = 0;           // variable to store the value read
@@ -402,47 +404,43 @@ void houseKeeping() {
 }
 
 void SENSORstuff() {
-    D1 = getVal(ADDRESS, 0x48); // Pressure raw
-    D2 = getVal(ADDRESS, 0x58);// Temperature raw
-    // dT   = D2 - (C[5]*(2^8));
-    dT   = D2 - ((uint32_t)C[5] << 8); //Difference between actual and reference temperature
-    OFF  = ((int64_t)C[2] << 16) + ((dT * C[4]) >> 7); //Offset at actual temperature
-    SENS = ((int32_t)C[1] << 15) + ((dT * C[3]) >> 8); //Sensitivity at actual temperature
-    TEMP = (((int64_t)dT * (int64_t)C[6]) >> 23) + 2000; //Actual temperature
-    if(TEMP < 2000) // if temperature lower than 20 Celsius 
-    {
-      int32_t T1    = 0;
-      int64_t OFF1  = 0;
-      int64_t SENS1 = 0;
-      T1    = pow(dT, 2) / 2147483648;
-      OFF1  = 5 * pow((TEMP - 2000), 2) / 2;
-      SENS1 = 5 * pow((TEMP - 2000), 2) / 4;
-      if(TEMP < -1500) // if temperature lower than -15 Celsius 
-      {
-        OFF1  = OFF1 + 7 * pow((TEMP + 1500), 2); 
-        SENS1 = SENS1 + 11 * pow((TEMP + 1500), 2) / 2;
-      }
-      TEMP -= T1;
-      OFF -= OFF1; 
-      SENS -= SENS1;
-    }
-    //double Temperature = (float)TEMP / 100;
-    Temperature_cC = TEMP + 6000;
-    P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
-    //double Pressure = (float)P / 100;
-    Pressure_dP = P;
-    Serial.print("(((((((((");
-    Serial.println(D2);
-    Serial.println((int)dT);
-    Serial.println((int)OFF);
-    Serial.println((int)SENS);
-    Serial.println(TEMP);
-    Serial.println(Temperature_cC);
-    Serial.println(")))))))))");
-    //Serial.print("      Actual Pressure = ");
-    //Serial.print(Pressure);
-    //Serial.print("      Pressure_dP = ");
-    //Serial.println(Pressure_dP);
+  // Tempurature and pressure good
+ D1 = getVal(ADDRESS, 0x48); // Pressure raw
+ D2 = getVal(ADDRESS, 0x58);// Temperature raw
+ // dT   = D2 - (C[5]*(2^8));
+ dT   = D2 - ((uint32_t)C[5] << 8); //Difference between actual and reference temperature 
+ //OFF  = ((int64_t)C[2] << 17) + ((dT * C[4]) >> 6);
+ OFF  = ((int64_t)C[2] << 16) + ((dT * C[4]) >> 7); //Offset at actual temperature
+ //SENS = ((int32_t)C[1] << 16) + ((dT * C[3]) >> 7);
+ SENS = ((int32_t)C[1] << 15) + ((dT * C[3]) >> 8); //Sensitivity at actual temperature
+ //TEMP = (((int64_t)dT * (int64_t)C[6]) >> 23) + 2000;//Actual temperature
+ TEMP = (int64_t)dT * (int64_t)C[6] / 8388608 + 2000; //Actual temperature
+ if(TEMP < 2000) // if temperature lower than 20 Celsius 
+ {
+   int32_t T1    = 0;
+   int64_t OFF1  = 0;
+   int64_t SENS1 = 0;
+   T1    = pow(dT, 2) / 2147483648;
+   OFF1  = 5 * pow((TEMP - 2000), 2) / 2;
+   SENS1 = 5 * pow((TEMP - 2000), 2) / 4;
+   if(TEMP < -1500) // if temperature lower than -15 Celsius 
+   {
+     OFF1  = OFF1 + 7 * pow((TEMP + 1500), 2); 
+     SENS1 = SENS1 + 11 * pow((TEMP + 1500), 2) / 2;
+   }
+   TEMP -= T1;
+   OFF -= OFF1; 
+   SENS -= SENS1;
+ }
+ Temp = (float)TEMP / 100; 
+ //P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 32768;
+ P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
+ Pressure = (float)P / 100;
+ Serial.print("Actual TEMP= ");
+ Serial.println(Temp);
+ Serial.print("Actual PRESSURE= ");
+ Serial.println(Pressure);
+ Serial.println("");
 }
 
 // functions for Sensor------------------------------------------------------------------------------------------
@@ -472,30 +470,30 @@ long getVal(int address, byte code)
 
 
 
-// void initial(uint8_t address)
-// {
-// Serial.println();
-// Serial.println("PROM COEFFICIENTS ivan");
-// Wire.beginTransmission(address);
-// Wire.write(0x1E); // reset
-// Wire.endTransmission();
- 
-// delay(10);
-// for (int i=0; i<6  ; i++) {
-  // Wire.beginTransmission(address);
-  // Wire.write(0xA2 + (i * 2));
-  // Wire.endTransmission();
-  // Wire.beginTransmission(address);
-  // Wire.requestFrom(address, (uint8_t) 6);
-  // delay(1);
-  // if(Wire.available())
-  // {
-     // C[i+1] = Wire.read() << 8 | Wire.read();
-  // }
-  // else {
-    // Serial.println("Error reading PROM 1"); // error reading the PROM or communicating with the device
-  // }
-  // Serial.println(C[i+1]);
-// }
-// Serial.println();
-// }
+void initial(uint8_t address)
+{
+ Serial.println();
+ Serial.println("PROM COEFFICIENTS ivan");
+ Wire.beginTransmission(address);
+ Wire.write(0x1E); // reset
+ Wire.endTransmission();
+  
+ delay(10);
+ for (int i=0; i<6  ; i++) {
+   Wire.beginTransmission(address);
+   Wire.write(0xA2 + (i * 2));
+   Wire.endTransmission();
+   Wire.beginTransmission(address);
+   Wire.requestFrom(address, (uint8_t) 6);
+   delay(1);
+   if(Wire.available())
+   {
+      C[i+1] = Wire.read() << 8 | Wire.read();
+   }
+   else {
+     Serial.println("Error reading PROM 1"); // error reading the PROM or communicating with the device
+   }
+   Serial.println(C[i+1]);
+ }
+ Serial.println();
+}
