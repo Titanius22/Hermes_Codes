@@ -40,7 +40,7 @@ short madeConnection = 0; //becomes true when connection is made. If connection 
 FILE *SocketNumFile;
 char SocketNumFileData[5];
 int ServerFileNum = 0;
-unsigned int counter = 1;
+unsigned int counter = 0;
 int i2cReadStatus;
 short dataLineLength = 29;
 short testNum = 0;
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 			do{
 				bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_NOSIGNAL);
 				startElementForSending += bytesSentCounter;
-			}while(startElementForSending < totalBytesToSend);
+			}while((startElementForSending < totalBytesToSend) && (bytesSentCounter >= 0));
 			counter++;
 			
 			
@@ -405,6 +405,8 @@ bool CheckSumMatches(char* arrayToCheck, short dataLength){ //dataLength exclude
 
 //SERVER STUFF. setting up socket
 void tryNewSocketConnection(){
+	
+	fprintf(stderr, "trying to connect\n");
 	
 	//if connection was already made but then was broken and tryNewSocketConnection() was called again, this if statment will increment the socketnumber and reset the connecting flag (madeConnection) before continuing
 	if (madeConnection == 1){
