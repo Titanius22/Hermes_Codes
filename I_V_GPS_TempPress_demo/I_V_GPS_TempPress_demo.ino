@@ -41,6 +41,8 @@ TinyGPS gps;
 #include <Wire.h>
 #define ADDRESS 0x76 //0x77
 #define ThermistorPIN 0
+#define analogPinV 1    // potentiometer wiper (middle terminal) connected to analog pin 3outside leads to ground and +5V
+#define analogPinI 2
 
 // for GPS------------------------------------------------------------------------------------------
 unsigned long age;
@@ -389,13 +391,11 @@ bool feedgps() {
 
 // Feed data as it becomes available 
 void HOUSEKEEPINGstuff() {
-	int analogPinV = 0;     // potentiometer wiper (middle terminal) connected to analog pin 3outside leads to ground and +5V
-	int analogPinI = 1; 
 	double Vread = 0;           // variable to store the value read
 	double Iread = 0;           // variable to store the value read
 
-	Vread = round(analogRead(analogPinV)/4);    // read the input pin
-	Iread = round(analogRead(analogPinI)/4);    // read the input pin
+	Vread = round(analogRead( analogPinV )/4);    // read the input pin
+	Iread = round(analogRead( analogPinI )/4);    // read the input pin
 	double Vvoltread = (5*Vread)/256;    // read the input pin
 	double Ivoltread = (5*Iread)/256;    // read the input pin
 	double Vin = 3.2206*Vvoltread - 0.086;    // read the input pin
@@ -460,7 +460,7 @@ void SENSORstuff() {
 	Serial.println(Pressure);
 	Serial.println("");
 
-	longBalloonExtTemp=Thermistor(analogRead(ThermistorPIN));           // read ADC and convert it to Celsius
+	longBalloonExtTemp=Thermistor(analogRead( ThermistorPIN ));           // read ADC and convert it to Celsius
 	Serial.print(", Celsius: "); printDouble(TherTemp,3);     // display Celsius
 	TherTemp = (TherTemp * 9.0)/ 5.0 + 32.0;                      // converts to Fahrenheit
 	Serial.print(", Fahrenheit: "); printDouble(TherTemp,3);  // display Fahrenheit
