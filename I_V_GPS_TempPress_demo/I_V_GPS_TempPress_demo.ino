@@ -130,9 +130,9 @@ void loop() {
 
 	//delay(1000);
 	GPSstuff();
-  	HOUSEKEEPINGstuff();
-  	SENSORstuff();
-	updateCharsToSend();
+  HOUSEKEEPINGstuff();
+  SENSORstuff();
+  updateCharsToSend();
 
   
   //if(newdata){
@@ -262,7 +262,7 @@ void updateCharsToSend(){
 	insertBytesFromInt(&longBalloonAlt, &writeTo, 3);
 	
 	//Time (seconds since UTC half day) --------------------------------------------
-	unsigned int longBalloonTime = 450;
+	//unsigned int longBalloonTime = 450;
 	insertBytesFromInt(&longBalloonTime, &writeTo, 2);
 
 	//Thermistor count------------------------------------------
