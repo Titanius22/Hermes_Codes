@@ -14,7 +14,7 @@
 #include <fcntl.h>
 
 #define N_ELEMENT_INDEX 87 // (3*29-1)+1 bytes
-#define NEW_FILE_RATE 900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
+#define NEW_FILE_RATE 3200 //900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
 #define DATA_TO_MOUNT_RATE 4 // number of seconds between data sent to mount
 #define LINE_LENGTH 29
 #define PACKET_LENGTH 87 //3*29
