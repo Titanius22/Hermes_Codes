@@ -69,8 +69,9 @@ int64_t OFF = 0;
 int64_t SENS = 0; 
 int32_t P = 0;
 uint16_t C[7];
-unsigned int Temperature_cC; //RealTemp +60C (to remove negative) then *10^2 to get temp in centiCelsius. 
-unsigned long Pressure_dP; //in decaPascels *10^2;
+unsigned long longBalloonIntTemp = 600; // in centi-kelvin
+unsigned long longBalloonPressure = 700; //in decaPascels *10^2;
+unsigned int longBalloonExtTemp = 800; // in 10-bit voltage count 
 float Temp;
 float Pressure;
 double TherTemp;
@@ -263,8 +264,8 @@ void updateCharsToSend(){
 	insertBytesFromInt(&longBalloonTime, &writeTo, 2);
 
 	//Thermistor count------------------------------------------
-	unsigned int intBuftemperature = 450;
-	insertBytesFromInt(&intBuftemperature, &writeTo, 2);
+	//unsigned int longBalloonExtTemp = 450;
+	insertBytesFromInt(&longBalloonExtTemp, &writeTo, 2);
 
 	//Battery Voltage---------------------------------------------
 	//unsigned short intBufpressure = 120;
@@ -291,12 +292,12 @@ void updateCharsToSend(){
 	insertBytesFromInt(&intBufpressure5, &writeTo, 1);
 
 	//Pressure---------------------------------------------
-	unsigned long intBufpressure6 = 102300;
-	insertBytesFromInt(&intBufpressure6, &writeTo, 3);
+	//unsigned long longBalloonPressure = 102300;
+	insertBytesFromInt(&longBalloonPressure, &writeTo, 3);
 
 	//Internal Temperature---------------------------------------------
-	unsigned int intBufpressure7 = 15;
-	insertBytesFromInt(&intBufpressure7, &writeTo, 2);
+	//unsigned int longBalloonIntTemp = 15;
+	insertBytesFromInt(&longBalloonIntTemp, &writeTo, 2);
 
 	CharsToSend[LineLength-3] = endLine[0];
 	CharsToSend[LineLength-2] = endLine[1];
@@ -447,17 +448,19 @@ void SENSORstuff() {
 		OFF -= OFF1; 
 		SENS -= SENS1;
 	}
-	Temp = (float)TEMP / 100; 
+	Temp = (float)TEMP / 100;
+	longBalloonIntTemp = TEMP + 27315; // Converts to to Kelvin
 	//P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 32768;
 	P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
 	Pressure = (float)P / 100;
+	longBalloonPressure = P;
 	Serial.print("Actual TEMP= ");
 	Serial.println(Temp);
 	Serial.print("Actual PRESSURE= ");
 	Serial.println(Pressure);
 	Serial.println("");
 
-	TherTemp=Thermistor(analogRead(ThermistorPIN));           // read ADC and convert it to Celsius
+	longBalloonExtTemp=Thermistor(analogRead(ThermistorPIN));           // read ADC and convert it to Celsius
 	Serial.print(", Celsius: "); printDouble(TherTemp,3);     // display Celsius
 	TherTemp = (TherTemp * 9.0)/ 5.0 + 32.0;                      // converts to Fahrenheit
 	Serial.print(", Fahrenheit: "); printDouble(TherTemp,3);  // display Fahrenheit
