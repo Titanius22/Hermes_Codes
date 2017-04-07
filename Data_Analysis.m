@@ -3,25 +3,34 @@ filename = fopen('csvData.csv', 'r');
 M = textscan(filename,'%d %d %d %d %d %d %d %d %d %d %d %d %d %d %c %c %c','Delimiter',',');
 %M = csvread('csvData.csv', 0, 0, [0, 0, 100000, 14])
 
-numberOfLines = 4614430;
-newNumberOfLine = 4614430;
+numberOfLines = length(M{1,1});
+newNumberOfLine = length(M{1,1});
 
 fclose(filename);
 
 %%
 
-for superman = 1:numberOfLines
-    if M{1, 5}(superman) ~= 11401
-        for batman = 1:17
-            M{1, batman}(superman) = 0;
-        end
-        newNumberOfLine = newNumberOfLine - 1;
-    end 
-end
+% for superman = 1:numberOfLines
+%     if M{1, 5}(superman) ~= 11401
+%         for batman = 1:17
+%             M{1, batman}(superman) = 0;
+%         end
+%         newNumberOfLine = newNumberOfLine - 1;
+%     end 
+% end
 
 %%
 M{1, 7} = 3.2206*(double(M{1, 7})*(5/255)) - 0.086; %convert from steps to voltage (V)
 M{1, 8} = 0.1116*(double(M{1, 8})*(5/255)) - 0.0009; %convert from steps to current (A)
+
+for counter = 1:numberOfLines
+    TemVar = (1023.0/double(M{1, 6}(counter))) - 1.0;
+    TempVar = log(10000*TemVar);
+    M{1, 6}(counter) = (1 / (0.001026853381291383 + (0.0002398699085819556 * TempVar) + (-0.00000007884414548067204 * TempVar * TempVar) + (0.0000001594372457358320*TempVar*TempVar*TempVar))) - 273.15;
+end
+M{1, 13} = M{1, 13} / 100; % kiloPascels
+M{1, 14} = (M{1, 14} - 27315) / 100; % celsius
+
 time = M{1, 5};
 linecount = M{1, 1};
 voltage = M{1, 7};
@@ -110,7 +119,7 @@ for kirk = 1:9
         case 5
             ylabel('UTC time (s)')
         case 6
-            ylabel('Thermistor (centi-celsius)')
+            ylabel('Thermistor (Celsius)')
         case 7
             ylabel('Voltage (V)')
         case 8
@@ -127,16 +136,16 @@ for kirk = 10:14
     xlabel('Sample Number') % x-axis label
     
     switch kirk
-        case 1
+        case 10
             ylabel('Sensor 2')
-        case 2
+        case 11
             ylabel('Sensor 3')
-        case 3
+        case 12
             ylabel('Sensor 4')
-        case 4
-            ylabel('Sensor 5')
-        case 5
-            ylabel('Sensor 6')
+        case 13
+            ylabel('Pressure (kPa)')
+        case 14
+            ylabel('Internal Temperature (Celsius)')
     end
 end
 
