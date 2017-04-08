@@ -14,11 +14,9 @@
 #include <fcntl.h>
 
 #define N_ELEMENT_INDEX 87 // (3*29-1)+1 bytes
-#define NEW_FILE_RATE 3200 //900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
+#define NEW_FILE_RATE 28800 // 8 hours //900 // number of seconds (15 min * 60 sec) before data saving switches to a new file.
 #define DATA_TO_MOUNT_RATE 4 // number of seconds between data sent to mount
 #define LINE_LENGTH 29
-#define PACKET_LENGTH 87 //3*29
-#define NUM_COL_RECV_BUFF_ARRAY 55
 #define RECV_BUFF_ARRAY_LENGTH 2896
 
 //prototyping
@@ -47,7 +45,6 @@ int main(int argc, char *argv[])
 {
 	char recvBuff[ RECV_BUFF_ARRAY_LENGTH ]; // one long array of recv data
 	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
-	unsigned short recvBuffRowLength[NUM_COL_RECV_BUFF_ARRAY];
 	unsigned short n = 1;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
@@ -299,19 +296,6 @@ short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 	}
 	return result;
 }
-
-
-/* unsigned short getNumberOfFullElements(char arrayToCheck[][PACKET_LENGTH ], unsigned short startingCol, unsigned short maxColNum, unsigned short packetLength, unsigned short rowLengthArray[]){
-	unsigned short result = 0;
-	unsigned short iCounter = startingCol;
-	
-	while((rowLengthArray[iCounter] == packetLength) && (iCounter <= maxColNum)){ 
-		result++;
-		iCounter++;
-	}
-	
-	return result;
-} */
 
 
 //SERVER STUFF. setting up socket
