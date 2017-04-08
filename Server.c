@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 	struct timespec RFstart={0,0}, RFstop={0,0}, GPSstart={0,0}, GPSstop={0,0};
 	int i;
 	packetTimeNanoSec =  (((double)dataLineLength*10*8)/ RF_SPEED )*1.0e9; // time between each packet transmission in nanoseconds
-	GPStimeNanoSec = (1.0) * 1.0e9; // (time in seconds)
+	GPStimeNanoSec = (0.01) * 1.0e9; // (time in seconds)
 	double mathVarible;
 	int bytesSentCounter = 0;
 	int startElementForSending = 0;
@@ -161,7 +161,6 @@ int main(int argc, char *argv[])
 					printf("i2cData dropped");
 				}
 				
-
 				if(counter%1400 == 0){
 					GPSLocCounter++;
 					if (GPSLocCounter > 23){
@@ -171,7 +170,7 @@ int main(int argc, char *argv[])
 					SetNewGPS(GPSLocCounter);
 				}
 				
-				TripleData(10);
+				TripleData();
 				
 			}
 			
@@ -237,10 +236,6 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "%c\n", (char)getIntFromByte(wrPtr,1));
 			}
 			
-		
-			//printf("%s\n", buf);
-			//nanosleep(&req,&rem);
-			//lineCounter++;
 		}
 		if(connected == 1){
 			connected = 0;
