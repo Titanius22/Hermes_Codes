@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 {
 	char recvBuff[ RECV_BUFF_ARRAY_LENGTH ]; // one long array of recv data
 	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
-	unsigned short n = 1;
+	unsigned short n;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 	
@@ -108,11 +108,12 @@ int main(int argc, char *argv[])
 		// If connection was made properly
 		if(tryNewSocketConnection() == 0){
 		
+			n = 1;
 			while (n > 0) 
 			{				
 				mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
 				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible);
-				if(n!=0){
+				if(n>0){
 					strikeCounter = 0;
 					do{		
 						recvBuffCURRENTelement += n;

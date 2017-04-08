@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 			if (strikes < 3){
 				watchdogReturn = api_watchdog_hwfeed();	
 			} else {
-				connectionError = -1
+				connectionError = -1;
 			}
 			
 			if(counter%500 == 0){
