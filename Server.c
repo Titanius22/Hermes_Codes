@@ -23,11 +23,16 @@
 //Prototyping
 unsigned long getIntFromByte(unsigned char** ,short);
 void insertBytesFromInt(void* ,unsigned char** , short);
-void tryNewSocketConnection();
+void tryNewSocketConnection(void);
 void SetNewData(short);
-void TripleData();
-void updateLineCounter();
+void TripleData(void);
+void updateLineCounter(void);
 bool CheckSumMatches(char* , short);
+int api_watchdog_hwfeed(void);
+void api_watchdog_setTime(int);
+int api_watchdog_open(const char *);
+int api_watchdog_init(const char *);
+void SetNewGPS(short);
 
 // The slave Arduino address
 #define ADDRESS 0x04
@@ -254,8 +259,7 @@ int main(int argc, char *argv[])
 }
 
 // "pet" watchdog
-int api_watchdog_hwfeed(void)
-{
+int api_watchdog_hwfeed(void){
     int ret = -1;
     if (api_watchdog_fd < 0){
         fprintf(stderr, "Watchdog must be opened first!\n");
@@ -269,8 +273,7 @@ int api_watchdog_hwfeed(void)
 }
 
 // set new timeout for watchdog
-void api_watchdog_setTime(int timeout)
-{
+void api_watchdog_setTime(int timeout){
 	if(ioctl(api_watchdog_fd , WDIOC_SETTIMEOUT ,&timeout) != 0) {
 		perror("SET");
 		close (api_watchdog_fd);
@@ -279,8 +282,7 @@ void api_watchdog_setTime(int timeout)
 }
 
 // opens and starts watchdog
-int api_watchdog_open(const char * watchdog_device)
-{
+int api_watchdog_open(const char * watchdog_device){
     int ret = -1;
     if (api_watchdog_fd >= 0){
         fprintf(stderr, "Watchdog already opened\n");
@@ -295,8 +297,7 @@ int api_watchdog_open(const char * watchdog_device)
 }
 
 // initiate watchdog
-int api_watchdog_init(const char *pcDevice)
-{
+int api_watchdog_init(const char *pcDevice){
     printf("Open WatchDog\n");
     int ret = 0;
     ret = api_watchdog_open("/dev/watchdog");
