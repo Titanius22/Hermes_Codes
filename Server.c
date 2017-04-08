@@ -66,7 +66,6 @@ int main(int argc, char *argv[])
 {
     struct timespec req={0},rem={0};
 	short connectionError;
-	short connected = 0;
 	char i2cDataPrechecked[33];
 	short GPSLocCounter = 0;
 	struct timespec RFstart={0,0}, RFstop={0,0}, GPSstart={0,0}, GPSstop={0,0};
@@ -130,9 +129,7 @@ int main(int argc, char *argv[])
 		
 		while (connectionError >= 0){
 			
-			api_watchdog_setTime(5); // 10 second timer
-			
-			connected = 1;
+			api_watchdog_setTime(5); // 5 second timer
 			
 			clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
 			if(((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
@@ -187,7 +184,7 @@ int main(int argc, char *argv[])
 			}while((startElementForSending < totalBytesToSend) && (bytesSentCounter >= 0));
 			counter++;
 			
-			if(bytesSentCounter < 0){
+			if(bytesSentCounter <= 0){
 				strikes++;
 			} else {
 				strikes == 0;
@@ -195,6 +192,8 @@ int main(int argc, char *argv[])
 			
 			if (strikes < 3){
 				watchdogReturn = api_watchdog_hwfeed();	
+			} else {
+				connectionError = -1
 			}
 			
 			if(counter%500 == 0){
@@ -237,10 +236,9 @@ int main(int argc, char *argv[])
 			}
 			
 		}
-		if(connected == 1){
-			connected = 0;
+		if(connectionError != 0){
 			watchdogReturn = api_watchdog_hwfeed();
-			api_watchdog_setTime(15); // 10 second timer
+			api_watchdog_setTime(15); // 15 second timer
 		}
 		
 		
