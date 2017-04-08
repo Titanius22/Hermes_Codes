@@ -112,13 +112,13 @@ int main(int argc, char *argv[])
 			while (n > 0) 
 			{				
 				mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
-				n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible);
+				n = recv(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible, MSG_DONTWAIT);
 				if(n>0){
 					strikeCounter = 0;
 					do{		
 						recvBuffCURRENTelement += n;
 						mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
-					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = read(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
+					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = recv(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible, MSG_DONTWAIT)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
 					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
 					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					*/
