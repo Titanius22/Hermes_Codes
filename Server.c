@@ -1,4 +1,5 @@
-//http://www.thegeekstuff.com/2011/12/c-socket-programming/?utm_source=feedburner
+//http://www.thegeekstuff.com/2011/12/c-socket-programming/
+//http://developer.toradex.com/knowledge-base/watchdog-(linux)
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -13,6 +14,8 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+#include <linux/watchdog.h>
 
 ////////////RF SPEED IN bps////////////////
 #define RF_SPEED 85000
@@ -48,6 +51,9 @@ double packetTimeNanoSec;
 double GPStimeNanoSec;
 int numberLinesToSend = 10;
 
+// watchdog stuff
+static int api_watchdog_fd = -1;
+
 
 
 
@@ -55,6 +61,7 @@ int main(int argc, char *argv[])
 {
     struct timespec req={0},rem={0};
 	short connectionError;
+	short connected = 0;
 	char i2cDataPrechecked[33];
 	short GPSLocCounter = 0;
 	struct timespec RFstart={0,0}, RFstop={0,0}, GPSstart={0,0}, GPSstop={0,0};
@@ -65,6 +72,17 @@ int main(int argc, char *argv[])
 	int bytesSentCounter = 0;
 	int startElementForSending = 0;
 	int totalBytesToSend = dataLineLength*10;
+	short strikes = 0; // failures
+	
+	
+	// Watchdog stuff
+	int watchdogReturn = 0;
+
+	watchdogReturn = api_watchdog_init("/dev/watchdog");
+	if(watchdogReturn < 0){
+        fprintf(stderr, "Could not init watchdog: %s\n", strerror(errno));
+    }
+	api_watchdog_setTime(15); // 15 second timer
 	
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
@@ -107,6 +125,10 @@ int main(int argc, char *argv[])
 		
 		while (connectionError >= 0){
 			
+			api_watchdog_setTime(5); // 10 second timer
+			
+			connected = 1;
+			
 			clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
 			if(((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
 				
@@ -124,37 +146,29 @@ int main(int argc, char *argv[])
 				for(i=0;i<dataLineLength;i++){
 					recvBuf[i] = i2cDataPrechecked[i];
 				}
-				TripleData(numberLinesToSend);
 				
-				// if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
-				//	 for(i=0;i<dataLineLength;i++){
-				//		 recvBuf[i] = i2cDataPrechecked[i];
-				//	 }
-				//	 TripleData(10);
-				// }
-				// else{
-				//	 printf("i2cData dropped");
-				// }
+				if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
+					for(i=0;i<dataLineLength;i++){
+						recvBuf[i] = i2cDataPrechecked[i];
+					}
+				}
+				else{
+					printf("i2cData dropped");
+				}
 				
-				/*
+
 				if(counter%1400 == 0){
 					GPSLocCounter++;
 					if (GPSLocCounter > 23){
 						GPSLocCounter = 0;
 					}
 					
-					SetNewData(GPSLocCounter);
+					SetNewGPS(GPSLocCounter);
 				}
-				*/
+				
+				TripleData(10);
+				
 			}
-			
-			/* //controls amount of data sent to the send buffer. Controls data overflow. Forces Max data speed
-			do{
-				clock_gettime(CLOCK_MONOTONIC, &RFstop); //taking new time measurement
-				mathVarible = (RFstop.tv_nsec + RFstop.tv_sec*1.0e9) - (RFstart.tv_nsec + RFstart.tv_sec*1.0e9);
-			}while(mathVarible < packetTimeNanoSec);
-			clock_gettime(CLOCK_MONOTONIC, &RFstart); //starting clock over again 
-			*/
 			
 			// update counter
 			updateLineCounter();
@@ -169,6 +183,15 @@ int main(int argc, char *argv[])
 			}while((startElementForSending < totalBytesToSend) && (bytesSentCounter >= 0));
 			counter++;
 			
+			if(bytesSentCounter < 0){
+				strikes++;
+			} else {
+				strikes == 0;
+			}
+			
+			if (strikes < 3){
+				watchdogReturn = api_watchdog_hwfeed();	
+			}
 			
 			if(counter%500 == 0){
 				unsigned char* writeArray=recvBuf;
@@ -214,6 +237,12 @@ int main(int argc, char *argv[])
 			//nanosleep(&req,&rem);
 			//lineCounter++;
 		}
+		if(connected == 1){
+			connected = 0;
+			watchdogReturn = api_watchdog_hwfeed();
+			api_watchdog_setTime(15); // 10 second timer
+		}
+		
 		
 		//delay
 		nanosleep(&req,&rem);
@@ -224,6 +253,139 @@ int main(int argc, char *argv[])
     close(ServerFileNum);
 }
 
+// "pet" watchdog
+int api_watchdog_hwfeed(void)
+{
+    int ret = -1;
+    if (api_watchdog_fd < 0){
+        fprintf(stderr, "Watchdog must be opened first!\n");
+        return ret;
+    }
+    ret = ioctl(api_watchdog_fd, WDIOC_KEEPALIVE, NULL);
+    if (ret < 0){
+        fprintf(stderr, "Could not pat watchdog: %s\n", strerror(errno));
+    }
+    return ret;
+}
+
+// set new timeout for watchdog
+void api_watchdog_setTime(int timeout)
+{
+	if(ioctl(api_watchdog_fd , WDIOC_SETTIMEOUT ,&timeout) != 0) {
+		perror("SET");
+		close (api_watchdog_fd);
+		exit(1);
+	}
+}
+
+// opens and starts watchdog
+int api_watchdog_open(const char * watchdog_device)
+{
+    int ret = -1;
+    if (api_watchdog_fd >= 0){
+        fprintf(stderr, "Watchdog already opened\n");
+        return ret;
+    }
+    api_watchdog_fd = open(watchdog_device, O_RDWR);
+    if (api_watchdog_fd < 0){
+        fprintf(stderr, "Could not open %s: %s\n", watchdog_device, strerror(errno));
+        return api_watchdog_fd;
+    }
+    return api_watchdog_fd;
+}
+
+// initiate watchdog
+int api_watchdog_init(const char *pcDevice)
+{
+    printf("Open WatchDog\n");
+    int ret = 0;
+    ret = api_watchdog_open("/dev/watchdog");
+    if(ret < 0){
+        return ret;
+    }
+    ret = api_watchdog_hwfeed();
+    return ret;
+}
+
+void SetNewGPS(short pick){
+	
+	unsigned char* writeTo=recvBuf;
+	
+	//Line counter-------------------------------------------
+	insertBytesFromInt(&counter, &writeTo, 2);
+
+	//Latitude
+	unsigned int intBuflatitude[12];
+	intBuflatitude[0] = (unsigned int)(29.50329 * 100000);
+	intBuflatitude[1] = (unsigned int)(29.43119 * 100000);
+	intBuflatitude[2] = (unsigned int)(29.35710 * 100000);
+	intBuflatitude[3] = (unsigned int)(29.22104 * 100000);
+	intBuflatitude[4] = (unsigned int)(28.66936 * 100000);
+	intBuflatitude[5] = (unsigned int)(28.56476 * 100000);
+	intBuflatitude[6] = (unsigned int)(28.16450 * 100000);
+	intBuflatitude[7] = (unsigned int)(28.50346 * 100000);
+	intBuflatitude[8] = (unsigned int)(28.77712 * 100000);
+	intBuflatitude[9] = (unsigned int)(29.20388 * 100000);
+	intBuflatitude[10] = (unsigned int)(29.37722 * 100000);
+	intBuflatitude[11] = (unsigned int)(29.54485 * 100000);
+	if(pick < 12){
+		insertBytesFromInt(&(intBuflatitude[pick]), &writeTo, 3);
+	}
+	else{
+		insertBytesFromInt(&(intBuflatitude[23-pick]), &writeTo, 3);
+	}
+	
+	//Longitude
+	unsigned int intBuflongitude[12];
+	intBuflongitude[0] = (unsigned int)(80.97349 * 100000);
+	intBuflongitude[1] = (unsigned int)(80.79702 * 100000);
+	intBuflongitude[2] = (unsigned int)(80.43164 * 100000);
+	intBuflongitude[3] = (unsigned int)(79.91662 * 100000);
+	intBuflongitude[4] = (unsigned int)(79.89670 * 100000);
+	intBuflongitude[5] = (unsigned int)(80.57611 * 100000);
+	intBuflongitude[6] = (unsigned int)(81.02110 * 100000);
+	intBuflongitude[7] = (unsigned int)(81.53164 * 100000);
+	intBuflongitude[8] = (unsigned int)(81.91366 * 100000);
+	intBuflongitude[9] = (unsigned int)(82.27724 * 100000);
+	intBuflongitude[10] = (unsigned int)(81.81272 * 100000);
+	intBuflongitude[11] = (unsigned int)(81.32954 * 100000);
+	if(pick < 12){
+		insertBytesFromInt(&(intBuflongitude[pick]), &writeTo, 3);
+	}
+	else{
+		insertBytesFromInt(&(intBuflongitude[23-pick]), &writeTo, 3);
+	}
+	
+
+	//Altitude (meters) * 100 --------------------------------------------
+	unsigned int intBufaltitude[24];
+	intBufaltitude[0] = (unsigned int)(0 * 100);
+	intBufaltitude[1] = (unsigned int)(1521.73 * 100);
+	intBufaltitude[2] = (unsigned int)(3043.47 * 100);
+	intBufaltitude[3] = (unsigned int)(4565.21 * 100);
+	intBufaltitude[4] = (unsigned int)(6086.95 * 100);
+	intBufaltitude[5] = (unsigned int)(7608.69 * 100);
+	intBufaltitude[6] = (unsigned int)(9130.43 * 100);
+	intBufaltitude[7] = (unsigned int)(10652.17 * 100);
+	intBufaltitude[8] = (unsigned int)(12173.91 * 100);
+	intBufaltitude[9] = (unsigned int)(13695.65 * 100);
+	intBufaltitude[10] = (unsigned int)(15217.39 * 100);
+	intBufaltitude[11] = (unsigned int)(16739.13 * 100);
+	intBufaltitude[12] = (unsigned int)(18260.87 * 100);
+	intBufaltitude[13] = (unsigned int)(19782.60 * 100);
+	intBufaltitude[14] = (unsigned int)(21304.34 * 100);
+	intBufaltitude[15] = (unsigned int)(22826.08 * 100);
+	intBufaltitude[16] = (unsigned int)(24347.82 * 100);
+	intBufaltitude[17] = (unsigned int)(25869.56 * 100);
+	intBufaltitude[18] = (unsigned int)(27391.30 * 100);
+	intBufaltitude[19] = (unsigned int)(28913.04 * 100);
+	intBufaltitude[20] = (unsigned int)(30434.78 * 100);
+	intBufaltitude[21] = (unsigned int)(31956.52 * 100);
+	intBufaltitude[22] = (unsigned int)(33478.26 * 100);
+	intBufaltitude[23] = (unsigned int)(35000 * 100);
+	insertBytesFromInt(&(intBufaltitude[pick]), &writeTo, 3);
+
+}
 
 void SetNewData(short pick){
 	
