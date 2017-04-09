@@ -184,7 +184,7 @@ void loop() {
 
 	double Vvoltread = (5*Vcount)/256;    // read the input pin
 	double Ivoltread = (5*Icount)/256;    // read the input pin
-	double Vin = 3.2206*Vvoltread - 0.086;    // read the input pin
+	double Vin = 3.4976*Vvoltread - 0.2541;    // read the input pin
 	double Iin = 0.1116*Ivoltread - 0.0009;    // read the input pin
 
 	Serial.print("\nV Value: ");         
