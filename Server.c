@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
 	int startElementForSending = 0;
 	int totalBytesToSend = dataLineLength*10;
 	short strikes = 0; // failures
+	short satisfied = 0; // 1 satisfied, 0 not-satisfied
 	
 	
 	// Watchdog stuff
@@ -125,7 +126,9 @@ int main(int argc, char *argv[])
 		
 		// try to make a connection
 		tryNewSocketConnection();
+		fprintf(stderr, "Connected\n");
 		connectionError = 0;
+		strikes = 0;
 		
 		while (connectionError >= 0){
 			
@@ -179,14 +182,27 @@ int main(int argc, char *argv[])
 			// tries to send data, if available space in buffer is less than the data length, the loop will keep trying to send till the buffer clears up enough to send it.
 			// send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
 			do{
-				bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_NOSIGNAL);
-				startElementForSending += bytesSentCounter;
-			}while((startElementForSending < totalBytesToSend) && (bytesSentCounter >= 0));
+				satisfied = 0;
+				do{
+					bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_DONTWAIT);
+					if (bytesSentCounter < 0){
+						if(errno == EAGAIN || errno == EWOULDBLOCK){
+							watchdogReturn = api_watchdog_hwfeed();	
+						} else if(errno == EPIPE){
+							satisfied = 1;
+							strikes = 4; // will cause the program to try and reconnect
+						}
+					} else{
+						satisfied = 1;
+						startElementForSending += bytesSentCounter;
+					}
+				}while(satisfied == 0); // keeps running till the commands goes through (if blocked due to data over flow) or 
+			}while((bytesSentCounter >= 0) && (startElementForSending < totalBytesToSend)); // keeps writing till buffer is full
 			counter++;
 			
-			if(bytesSentCounter <= 0){
+			if(bytesSentCounter < 0 || startElementForSending == 0){
 				strikes++;
-			} else {
+			} else{
 				strikes == 0;
 			}
 			
@@ -578,6 +594,15 @@ void tryNewSocketConnection(){
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     listen(listenfd, 10);
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
+	
+	struct sigaction sa;
+	sa.sa_handler = SIG_IGN;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	if (sigaction(SIGPIPE, &sa, 0) == -1) {
+		perror(0);
+		exit(1);
+	}
 	
 	//Only makes it this far if none of the above errors have occured.
 	//Connection was made therefor the SocketNumber file but be updated
