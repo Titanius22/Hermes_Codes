@@ -598,12 +598,10 @@ void tryNewSocketConnection(){
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 	
 	// Setup Action Handler
-	handler.sa_handler = KBInterrupt; // Function to call
-	if (sigfillset(&handler.sa_mask) < 0){
-		exit_error("sigfillset failed");
-	}
+	handler.sa_handler = SIG_IGN; // Ignore signal
+	sigemptyset(&handler.sa_mask)
 	handler.sa_flags=0;
-	if (sigaction(SIGINT,&handler,0) < 0){ // Setup signal
+	if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
 		exit_error("sigaction failed");
 	}
 	
