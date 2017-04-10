@@ -599,7 +599,7 @@ void tryNewSocketConnection(){
 	
 	// Setup Action Handler
 	handler.sa_handler = SIG_IGN; // Ignore signal
-	sigemptyset(&handler.sa_mask)
+	sigemptyset(&handler.sa_mask);
 	handler.sa_flags=0;
 	if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
 		exit_error("sigaction failed");
