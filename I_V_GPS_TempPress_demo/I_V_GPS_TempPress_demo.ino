@@ -73,7 +73,7 @@ int32_t P = 0;
 uint16_t C[7];
 unsigned long longBalloonIntTemp = 600; // in centi-kelvin
 unsigned long longBalloonPressure = 700; //in decaPascels *10^2;
-unsigned int longBalloonExtTemp = 800; // in 10-bit voltage count 
+unsigned int intBalloonExtTemp = 800; // in 10-bit voltage count 
 float Temp;
 float Pressure;
 double TherTemp;
@@ -266,8 +266,8 @@ void updateCharsToSend(){
 	insertBytesFromInt(&longBalloonTime, &writeTo, 2);
 
 	//Thermistor count------------------------------------------
-	//unsigned int longBalloonExtTemp = 450;
-	insertBytesFromInt(&longBalloonExtTemp, &writeTo, 2);
+	//unsigned int intBalloonExtTemp = 450;
+	insertBytesFromInt(&intBalloonExtTemp, &writeTo, 2);
 
 	//Battery Voltage---------------------------------------------
 	//unsigned short intBufpressure = 120;
@@ -460,7 +460,8 @@ void SENSORstuff() {
 	Serial.println(Pressure);
 	Serial.println("");
 
-	longBalloonExtTemp=Thermistor(analogRead( ThermistorPIN ));           // read ADC and convert it to Celsius
+	intBalloonExtTemp = analogRead( ThermistorPIN );
+	TherTemp = Thermistor(intBalloonExtTemp);           // read ADC and convert it to Celsius
 	Serial.print(", Celsius: "); printDouble(TherTemp,3);     // display Celsius
 	TherTemp = (TherTemp * 9.0)/ 5.0 + 32.0;                      // converts to Fahrenheit
 	Serial.print(", Fahrenheit: "); printDouble(TherTemp,3);  // display Fahrenheit
