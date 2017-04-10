@@ -635,12 +635,8 @@ void tryNewSocketConnection(){
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     listen(listenfd, 10);
 	
-	do{
-		ServerFileNum = accept4(listenfd, (struct sockaddr*)NULL, NULL, SOCK_NONBLOCK);
-		perror(0);
-		nanosleep(&req,&rem);
-	}while(ServerFileNum < 0);
-	
+	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
+
 	// Setup Action Handler
 	handler.sa_handler = SIG_IGN; // Ignore signal
 	sigemptyset(&handler.sa_mask);
