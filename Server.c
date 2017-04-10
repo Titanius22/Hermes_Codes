@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <linux/watchdog.h>
+#include <signal.h>
 
 ////////////RF SPEED IN bps////////////////
 #define RF_SPEED 85000
@@ -583,6 +584,7 @@ void tryNewSocketConnection(){
 	
 	int listenfd = 0;
     struct sockaddr_in serv_addr;
+	struct sigaction handler;
 	
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -595,13 +597,14 @@ void tryNewSocketConnection(){
     listen(listenfd, 10);
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 	
-	struct sigaction sa;
-	sa.sa_handler = SIG_IGN;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	if (sigaction(SIGPIPE, &sa, 0) == -1) {
-		perror(0);
-		exit(1);
+	// Setup Action Handler
+	handler.sa_handler = KBInterrupt; // Function to call
+	if (sigfillset(&handler.sa_mask) < 0){
+		exit_error("sigfillset failed");
+	}
+	handler.sa_flags=0;
+	if (sigaction(SIGINT,&handler,0) < 0){ // Setup signal
+		exit_error("sigaction failed");
 	}
 	
 	//Only makes it this far if none of the above errors have occured.
