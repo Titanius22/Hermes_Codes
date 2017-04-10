@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
 	short n;
 	struct timespec req={0},rem={0};
-	req.tv_nsec = 500000000; //500ms
+	req.tv_nsec = 100000000; //100ms
 	
 	unsigned short i = 0;
 	int fileCount = 1;

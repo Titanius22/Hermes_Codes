@@ -1,5 +1,6 @@
 //http://www.thegeekstuff.com/2011/12/c-socket-programming/
 //http://developer.toradex.com/knowledge-base/watchdog-(linux)
+//http://my.fit.edu/~vkepuska/ece3551/ADI_Speedway_Golden/Blackfin%20Speedway%20Manuals/LwIP/socket-api/setsockopt_exp.html
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -137,7 +138,7 @@ int main(int argc, char *argv[])
 		
 		while (connectionError >= 0){
 			
-			api_watchdog_setTime(5); // 5 second timer
+			api_watchdog_setTime(6); // 6 second timer
 			
 			clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
 			if(((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
@@ -154,6 +155,7 @@ int main(int argc, char *argv[])
 					printf("i2cData dropped");
 					
 					if(i2cDropCount >= 3){ // if data is dropped 3 times in a row, arduino will be reset
+						watchdogReturn = api_watchdog_hwfeed();
 						i2cDropCount = 0; // restes to zero
 						if(arduinoResets >= 3){ // Arduino has had to reset 3 times, Pi will be reset
 							api_watchdog_setTime(1); // 1 second timer
@@ -621,7 +623,8 @@ void tryNewSocketConnection(){
 	
 	int listenfd = 0;
     struct sockaddr_in serv_addr;
-	struct sigaction handler;
+	//struct sigaction handler;
+	int dumb = 1;
 	
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -632,15 +635,23 @@ void tryNewSocketConnection(){
 
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     listen(listenfd, 10);
+	
+	if(setsockopt(listenfd, SOL_SOCKET, SO_NOSIGPIPE, &dumb, sizeof(dumb)) < 0){
+		printf("setsockopt failed\n");
+		close(socket_fd);
+	}
+	
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 	
+	
+	
 	// Setup Action Handler
-	handler.sa_handler = SIG_IGN; // Ignore signal
-	sigemptyset(&handler.sa_mask);
-	handler.sa_flags=0;
-	if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
-		perror(0);
-	}
+	// handler.sa_handler = SIG_IGN; // Ignore signal
+	// sigemptyset(&handler.sa_mask);
+	// handler.sa_flags=0;
+	// if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
+		// perror(0);
+	// }
 	
 	//Only makes it this far if none of the above errors have occured.
 	//Connection was made therefor the SocketNumber file but be updated
