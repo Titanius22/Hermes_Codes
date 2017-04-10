@@ -623,8 +623,7 @@ void tryNewSocketConnection(){
 	
 	int listenfd = 0;
     struct sockaddr_in serv_addr;
-	//struct sigaction handler;
-	int dumb = 1;
+	struct sigaction handler;
 	
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -636,22 +635,19 @@ void tryNewSocketConnection(){
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     listen(listenfd, 10);
 	
-	if(setsockopt(listenfd, SOL_SOCKET, SO_NOSIGPIPE, &dumb, sizeof(dumb)) < 0){
-		printf("setsockopt failed\n");
-		close(socket_fd);
-	}
-	
-	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
-	
-	
+	do{
+		ServerFileNum = accept4(listenfd, (struct sockaddr*)NULL, NULL, SOCK_NONBLOCK);
+		perror(0);
+		nanosleep(&req,&rem);
+	}while(ServerFileNum < 0);
 	
 	// Setup Action Handler
-	// handler.sa_handler = SIG_IGN; // Ignore signal
-	// sigemptyset(&handler.sa_mask);
-	// handler.sa_flags=0;
-	// if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
-		// perror(0);
-	// }
+	handler.sa_handler = SIG_IGN; // Ignore signal
+	sigemptyset(&handler.sa_mask);
+	handler.sa_flags=0;
+	if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
+		perror(0);
+	}
 	
 	//Only makes it this far if none of the above errors have occured.
 	//Connection was made therefor the SocketNumber file but be updated
