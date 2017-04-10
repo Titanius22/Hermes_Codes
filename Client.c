@@ -45,13 +45,12 @@ int main(int argc, char *argv[])
 {
 	char recvBuff[ RECV_BUFF_ARRAY_LENGTH ]; // one long array of recv data
 	unsigned int recvBuffCURRENTelement = 0; //element at which to start saving data to
-	unsigned short n;
+	short n;
 	struct timespec req={0},rem={0};
 	req.tv_nsec = 500000000; //500ms
 	
 	unsigned short i = 0;
 	int fileCount = 1;
-	int fileLineCount = 1;
 	char fileCounter[8];
 	//char filepath[] =  "/home/alarm/randomJunk/cCodeTests/DistanceTest/";
 	//char fileName[] = "DistanceTestFULLER";
@@ -108,20 +107,34 @@ int main(int argc, char *argv[])
 		// If connection was made properly
 		if(tryNewSocketConnection() == 0){
 		
+			fprintf(stderr, "Connected\n");
 			n = 1;
 			while (n > 0) 
 			{				
 				mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
-				n = recv(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible, MSG_DONTWAIT);
+				n = recv(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible, 0);
 				if(n>0){
 					strikeCounter = 0;
 					do{		
 						recvBuffCURRENTelement += n;
 						mathVarible = RECV_BUFF_ARRAY_LENGTH - recvBuffCURRENTelement;
-					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = recv(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible, MSG_DONTWAIT)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
+					}while ((recvBuffCURRENTelement < RECV_BUFF_ARRAY_LENGTH) && (n = recv(ServerFileNum, &recvBuff[recvBuffCURRENTelement], mathVarible, 0)) > 0); /* The order of the conditional statement matters. If the first condition fails it will not check the 
 					second condition. This is good because if the first condition fails and the second condition is tryed, the data will be saved
 					outside of the array. This has already caused problems requireing me to change the while loop to the current configuration.
 					*/
+					
+					if(n < 0){
+						if(errno == EAGAIN || errno == EWOULDBLOCK){
+							// do nothing, its just busy
+						} else if(errno == EPIPE){ //broken pipe
+							n = 0; // will add to the strike counter when it gets to the end of the loop
+							strikeCounter = 4; // the loop will end when it hit the end.
+						} else if(errno == EINTR){
+							n = 0; // will add to the strike counter when it gets to the end of the loop
+						} else if(errno == EIO){
+							n = 0; // will add to the strike counter when it gets to the end of the loop
+						}
+					}
 					
 					// At the start of every new "page", it creates and opens a new file
 					if (createNewFile == 1){
@@ -228,16 +241,26 @@ int main(int argc, char *argv[])
 							epochTimeSecondsFile = bufEpoch;
 							
 							// File tracking and counting
-							fileLineCount = 0;
 							fileCount++;
 							fclose(filePointer);
 							filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 							createNewFile = 1;
 						}
 					}				
-					
-					fileLineCount++;
 				}
+				
+				if(n < 0){ // exact copy as if block from above. trying to save time at 3:38am
+						if(errno == EAGAIN || errno == EWOULDBLOCK){
+							// do nothing, its just busy
+						} else if(errno == EPIPE){ //broken pipe
+							n = 0; // will add to the strike counter when it gets to the end of the loop
+							strikeCounter = 4; // the loop will end when it hit the end.
+						} else if(errno == EINTR){
+							n = 0; // will add to the strike counter when it gets to the end of the loop
+						} else if(errno == EIO){
+							n = 0; // will add to the strike counter when it gets to the end of the loop
+						}
+					}
 				
 				if(n==0){
 					strikeCounter++;
@@ -317,6 +340,9 @@ int tryNewSocketConnection(){
 		printf("\n Error : Could not create socket \n");
 		return -1;
 	}
+	
+	// Makes the socket non-blocking. It won't read/write command won't block.
+	fcntl(ServerFileNum, F_SETFL, O_NONBLOCK);  // set to non-blocking
 	
 	memset(&serv_addr, '0', sizeof(serv_addr)); 
 	
