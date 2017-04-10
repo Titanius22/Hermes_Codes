@@ -603,7 +603,6 @@ void tryNewSocketConnection(){
 	handler.sa_flags=0;
 	if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
 		perror(0);
-		exit(1);
 	}
 	
 	//Only makes it this far if none of the above errors have occured.
