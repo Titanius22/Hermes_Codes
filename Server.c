@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <linux/watchdog.h>
 #include <signal.h>
+#include <wiringPi.h>
 
 ////////////RF SPEED IN bps////////////////
 #define RF_SPEED 85000
@@ -34,9 +35,12 @@ void api_watchdog_setTime(int);
 int api_watchdog_open(const char *);
 int api_watchdog_init(const char *);
 void SetNewGPS(short);
+void initArduinoReset(void);
+void ResetArduino(void);
 
-// The slave Arduino address
+// The slave Arduino info
 #define ADDRESS 0x04
+#define ARDUINO_RESET_PIN 26
 
 // The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
 static const char *devName = "/dev/i2c-1";
@@ -60,9 +64,6 @@ int numberLinesToSend = 10;
 // watchdog stuff
 static int api_watchdog_fd = -1;
 
-
-
-
 int main(int argc, char *argv[])
 {
     struct timespec req={0},rem={0};
@@ -79,6 +80,8 @@ int main(int argc, char *argv[])
 	int totalBytesToSend = dataLineLength*10;
 	short strikes = 0; // failures
 	short satisfied = 0; // 1 satisfied, 0 not-satisfied
+	short i2cDropCount = 0;
+	short arduinoResets = 0;
 	
 	
 	// Watchdog stuff
@@ -93,21 +96,22 @@ int main(int argc, char *argv[])
 	//I2C STUFF. setting up i2c for communication
 	printf("I2C: Connecting\n");
 	int i2cfile;
-
 	if ((i2cfile = open(devName, O_RDWR)) < 0) {
 		fprintf(stderr, "I2C: Failed to access %d\n", devName);
 		exit(1);
 	}
-
 	printf("I2C: acquiring buss to 0x%x\n", ADDRESS);
-
 	if (ioctl(i2cfile, I2C_SLAVE, ADDRESS) < 0) {
 		fprintf(stderr, "I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS);
 		exit(1);
 	}
 	
+	//Initializes WiringPi library, allows GPIO pins to be used
+	wiringPiSetupGpio(); // Initializes wiringPi using the Broadcom GPIO pin numbers
+	initArduinoReset(); 
+	
 	//set sleep duration
-	req.tv_nsec = 5000000; //5ms
+	req.tv_nsec = 5000000; //5ms. effects stuff near line 160, its a forced sleep till reset
 	
 	//look at SocketNum file to check what number to start with
 	SocketNumFile = fopen(SocketNumFileName, "r");
@@ -142,34 +146,45 @@ int main(int argc, char *argv[])
 				clock_gettime(CLOCK_MONOTONIC, &GPSstart);
 				
 				// keeps reading till a good message gets through
+				arduinoResets = 0;
+				i2cDropCount = 0;
 				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 				while(!CheckSumMatches(i2cDataPrechecked, dataLineLength)){
+					i2cDropCount++;
 					printf("i2cData dropped");
+					
+					if(i2cDropCount >= 3){ // if data is dropped 3 times in a row, arduino will be reset
+						i2cDropCount = 0; // restes to zero
+						if(arduinoResets >= 3){ // Arduino has had to reset 3 times, Pi will be reset
+							api_watchdog_setTime(1); // 1 second timer
+							for(i=0;1<300;i++){ // will sleep for 5ms * 300 = 1.5 seconds. should only take 1 second
+								nanosleep(&req,&rem);
+							}
+						}
+						
+						ResetArduino();
+						arduinoResets++;
+					}
+					
 					i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 				}
+				
+				
+				
 				
 				// copies the data 				
 				for(i=0;i<dataLineLength;i++){
 					recvBuf[i] = i2cDataPrechecked[i];
 				}
 				
-				if(CheckSumMatches(i2cDataPrechecked, dataLineLength)){
-					for(i=0;i<dataLineLength;i++){
-						recvBuf[i] = i2cDataPrechecked[i];
-					}
-				}
-				else{
-					printf("i2cData dropped");
-				}
-				
-				if(counter%1400 == 0){
-					GPSLocCounter++;
-					if (GPSLocCounter > 23){
-						GPSLocCounter = 0;
-					}
+				// if(counter%1400 == 0){
+					// GPSLocCounter++;
+					// if (GPSLocCounter > 23){
+						// GPSLocCounter = 0;
+					// }
 					
-					SetNewGPS(GPSLocCounter);
-				}
+					// SetNewGPS(GPSLocCounter);
+				// }
 				
 				TripleData();
 				
@@ -266,6 +281,28 @@ int main(int argc, char *argv[])
     }
 	fprintf(stderr, "Finished sending");
     close(ServerFileNum);
+}
+
+// Initializes pin settings for Arduino reset
+void initArduinoReset(void){
+	pinMode( ARDUINO_RESET_PIN , OUTPUT);
+	digitalWrite( ARDUINO_RESET_PIN , HIGH);
+}
+
+void ResetArduino(void){
+	struct timespec req={0},rem={0};
+	
+	//set sleep duration
+	req.tv_nsec = 1000000; //1ms
+	
+	// Sends LOW to Arduino reset pin, cause it to reset
+	digitalWrite( ARDUINO_RESET_PIN , LOW);
+	
+	//delay to ensure it got the message
+	nanosleep(&req,&rem);
+	
+	// Sends HIGH to Arduino reset pin, allowing it to turn on as normal
+	digitalWrite( ARDUINO_RESET_PIN , HIGH);
 }
 
 // "pet" watchdog
