@@ -602,7 +602,8 @@ void tryNewSocketConnection(){
 	sigemptyset(&handler.sa_mask);
 	handler.sa_flags=0;
 	if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
-		exit_error("sigaction failed");
+		perror(0);
+		exit(1);
 	}
 	
 	//Only makes it this far if none of the above errors have occured.
