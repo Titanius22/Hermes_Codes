@@ -152,14 +152,14 @@ int main(int argc, char *argv[])
 				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 				while(!CheckSumMatches(i2cDataPrechecked, dataLineLength)){
 					i2cDropCount++;
-					printf("i2cData dropped");
+					fprintf(stderr, "i2cData dropped");
 					
 					if(i2cDropCount >= 3){ // if data is dropped 3 times in a row, arduino will be reset
 						watchdogReturn = api_watchdog_hwfeed();
 						i2cDropCount = 0; // restes to zero
 						if(arduinoResets >= 3){ // Arduino has had to reset 3 times, Pi will be reset
 							api_watchdog_setTime(1); // 1 second timer
-							for(i=0;1<300;i++){ // will sleep for 5ms * 300 = 1.5 seconds. should only take 1 second
+							for(i=0;i<300;i++){ // will sleep for 5ms * 300 = 1.5 seconds. should only take 1 second
 								nanosleep(&req,&rem);
 							}
 						}
@@ -295,13 +295,15 @@ void ResetArduino(void){
 	struct timespec req={0},rem={0};
 	
 	//set sleep duration
-	req.tv_nsec = 1000000; //1ms
+	req.tv_nsec = 50000000; //50ms
 	
 	// Sends LOW to Arduino reset pin, cause it to reset
 	digitalWrite( ARDUINO_RESET_PIN , LOW);
 	
 	//delay to ensure it got the message
-	nanosleep(&req,&rem);
+	for(i=0;i<40;i++){ // will sleep for 5ms * 300 = 1.5 seconds. should only take 1 second
+		nanosleep(&req,&rem);
+	}
 	
 	// Sends HIGH to Arduino reset pin, allowing it to turn on as normal
 	digitalWrite( ARDUINO_RESET_PIN , HIGH);
