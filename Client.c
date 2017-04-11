@@ -279,17 +279,21 @@ int main(int argc, char *argv[])
 					}
 				}
 				
-				if(smallStrikeCounter > 5){
+				if(smallStrikeCounter >= 5){
 					n = 0; // will drop it out of the loop
 					smallStrikeCounter = 0;
 				}
 			}
+			
+			fprintf(stderr, "n is not > 0\n");
 			
 			if(filePointer!=NULL){
 				fclose(filePointer);
 				filePointer = NULL; //This is so that the file pointr can be checked if it has been closed
 				createNewFile = 1;
 			}
+			
+			fprintf(stderr, "Socket file was closed");
 
 		}
 		
@@ -348,8 +352,6 @@ int tryNewSocketConnection(){
 		madeConnection = 0;
 	}
 	
-	
-	
 	if((ServerFileNum = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		printf("\n Error : Could not create socket \n");
@@ -365,7 +367,7 @@ int tryNewSocketConnection(){
 	struct timeval tv;
 	tv.tv_sec = 1;  /* 1 Secs Timeout */
 	tv.tv_usec = 0;  // Not init'ing this can cause strange errors
-	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
+	setsockopt(ServerFileNum, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
 	
 	// The arv[1] was originally the first trminal argument which was the ip address
 	//if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)

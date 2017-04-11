@@ -649,7 +649,7 @@ void tryNewSocketConnection(){
 	// set a timeout for you  commands
 	tv.tv_sec = 1;  /* 1 Secs Timeout */
 	tv.tv_usec = 0;  // Not init'ing this can cause strange errors
-	setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(struct timeval));
+	setsockopt(listenfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(struct timeval));
 	 
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
