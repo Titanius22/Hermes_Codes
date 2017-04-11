@@ -293,6 +293,7 @@ void initArduinoReset(void){
 
 void ResetArduino(void){
 	struct timespec req={0},rem={0};
+	int i;
 	
 	//set sleep duration
 	req.tv_nsec = 50000000; //50ms

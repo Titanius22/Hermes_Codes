@@ -76,6 +76,7 @@ int main(int argc, char *argv[])
 	unsigned short createNewFile = 1; // 1 yes, 0 no
 	unsigned short numFullTransmissions = 0;
 	unsigned short strikeCounter = 0;
+	unsigned short smallStrikeCounter = 0;
 	unsigned short mathVarible = 0;
 	char * stringVarible;
 	unsigned short doIt = 0;
@@ -102,6 +103,9 @@ int main(int argc, char *argv[])
 	fclose(SocketNumFile);
 	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
 	
+	// Initialize it to be null
+	filePointer = NULL;
+	
 	while(1){ 
 		
 		// If connection was made properly
@@ -125,6 +129,8 @@ int main(int argc, char *argv[])
 					
 					if(n < 0){
 						if(errno == EAGAIN || errno == EWOULDBLOCK){
+							n = 1; // will let the loop keep going
+							smallStrikeCounter++;
 							// do nothing, its just busy
 						} else if(errno == EPIPE){ //broken pipe
 							n = 0; // will add to the strike counter when it gets to the end of the loop
@@ -250,24 +256,31 @@ int main(int argc, char *argv[])
 				}
 				
 				if(n < 0){ // exact copy as if block from above. trying to save time at 3:38am
-						if(errno == EAGAIN || errno == EWOULDBLOCK){
-							// do nothing, its just busy
-						} else if(errno == EPIPE){ //broken pipe
-							n = 0; // will add to the strike counter when it gets to the end of the loop
-							strikeCounter = 4; // the loop will end when it hit the end.
-						} else if(errno == EINTR){
-							n = 0; // will add to the strike counter when it gets to the end of the loop
-						} else if(errno == EIO){
-							n = 0; // will add to the strike counter when it gets to the end of the loop
-						}
+					if(errno == EAGAIN || errno == EWOULDBLOCK){
+						n = 1; // will let the loop keep going
+						smallStrikeCounter++;
+						// do nothing, its just busy
+					} else if(errno == EPIPE){ //broken pipe
+						n = 0; // will add to the strike counter when it gets to the end of the loop
+						strikeCounter = 4; // the loop will end when it hit the end.
+					} else if(errno == EINTR){
+						n = 0; // will add to the strike counter when it gets to the end of the loop
+					} else if(errno == EIO){
+						n = 0; // will add to the strike counter when it gets to the end of the loop
 					}
-				
+				}
+
 				if(n==0){
 					strikeCounter++;
 					n=1; //sets it back to not-zero so that it reading too fast won't trigger a failure (reading too fast as in it clears the buffer before it has a chance to get more data)
 					if(strikeCounter >= 3){ //3 strikes, you're out. (the reading is probally failing of something)
 						n=0; //sets it to zero so it will fail the larger while loop
 					}
+				}
+				
+				if(smallStrikeCounter > 5){
+					n = 0; // will drop it out of the loop
+					smallStrikeCounter = 0;
 				}
 			}
 			
@@ -278,6 +291,8 @@ int main(int argc, char *argv[])
 			}
 
 		}
+		
+		
 		
 		//delay
 		nanosleep(&req,&rem);
@@ -354,12 +369,14 @@ int tryNewSocketConnection(){
 	if(inet_pton(AF_INET, "10.1.1.232", &serv_addr.sin_addr)<=0)
 	{
 		printf("\n inet_pton error occured\n");
+		perror(0);
 		return -1;
 	}
 	
 	if(connect(ServerFileNum, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{
 		printf("\n Error : Connect Failed \n");
+		perror(0);
 		return -1;
 	}
 	
@@ -374,7 +391,7 @@ int tryNewSocketConnection(){
 	
 	return 0;
 }
-		
+
 unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
