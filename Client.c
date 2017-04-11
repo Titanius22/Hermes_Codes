@@ -356,9 +356,6 @@ int tryNewSocketConnection(){
 		return -1;
 	}
 	
-	// Makes the socket non-blocking. It won't read/write command won't block.
-	fcntl(ServerFileNum, F_SETFL, O_NONBLOCK);  // set to non-blocking
-	
 	memset(&serv_addr, '0', sizeof(serv_addr)); 
 	
 	serv_addr.sin_family = AF_INET;
