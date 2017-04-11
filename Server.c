@@ -1,6 +1,7 @@
 //http://www.thegeekstuff.com/2011/12/c-socket-programming/
 //http://developer.toradex.com/knowledge-base/watchdog-(linux)
 //http://my.fit.edu/~vkepuska/ece3551/ADI_Speedway_Golden/Blackfin%20Speedway%20Manuals/LwIP/socket-api/setsockopt_exp.html
+//http://stackoverflow.com/questions/2876024/linux-is-there-a-read-or-recv-from-socket-with-timeout
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -79,6 +80,7 @@ int main(int argc, char *argv[])
 	int bytesSentCounter = 0;
 	int startElementForSending = 0;
 	int totalBytesToSend = dataLineLength*10;
+	short smallStrikes = 0;
 	short strikes = 0; // failures
 	short satisfied = 0; // 1 satisfied, 0 not-satisfied
 	short i2cDropCount = 0;
@@ -202,10 +204,15 @@ int main(int argc, char *argv[])
 			do{
 				satisfied = 0;
 				do{
-					bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, MSG_DONTWAIT);
+					bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, 0);
 					if (bytesSentCounter < 0){
 						if(errno == EAGAIN || errno == EWOULDBLOCK){
 							watchdogReturn = api_watchdog_hwfeed();	
+							smallStrikes++;
+							if(smallStrikes >= 3){
+								satisfied = 1;
+								strikes = 4; // will cause the program to try and reconnect
+							}
 						} else if(errno == EPIPE){
 							satisfied = 1;
 							strikes = 4; // will cause the program to try and reconnect
@@ -627,6 +634,7 @@ void tryNewSocketConnection(){
 	int listenfd = 0;
     struct sockaddr_in serv_addr;
 	struct sigaction handler;
+	struct timeval tv;
 	
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -638,6 +646,11 @@ void tryNewSocketConnection(){
     bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     listen(listenfd, 10);
 	
+	// set a timeout for you  commands
+	tv.tv_sec = 1;  /* 1 Secs Timeout */
+	tv.tv_usec = 0;  // Not init'ing this can cause strange errors
+	setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(struct timeval));
+	 
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
 	// Setup Action Handler

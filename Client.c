@@ -348,8 +348,7 @@ int tryNewSocketConnection(){
 		madeConnection = 0;
 	}
 	
-	// Makes varible free
-	//////////////////////////////////////////////////////////////////////////serv_addr = {0};
+	
 	
 	if((ServerFileNum = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
@@ -361,6 +360,12 @@ int tryNewSocketConnection(){
 	
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(startingSocketNum);
+	
+	// set a timeout for you  commands
+	struct timeval tv;
+	tv.tv_sec = 1;  /* 1 Secs Timeout */
+	tv.tv_usec = 0;  // Not init'ing this can cause strange errors
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
 	
 	// The arv[1] was originally the first trminal argument which was the ip address
 	//if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
