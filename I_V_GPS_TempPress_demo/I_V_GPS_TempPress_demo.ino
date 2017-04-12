@@ -121,53 +121,58 @@ void setup() {
 }
 
 void loop() {
-	//Serial.print((char) CharsToSend[0]);
-	//Serial.print((char) CharsToSend[1]);
-	//Serial.print((char) CharsToSend[2]);
-	//Serial.print((char) CharsToSend[3]);
-	//Serial.print((char) CharsToSend[4]);
-	//Serial.print((char) CharsToSend[5]);
-
+	
 	//delay(1000);
 	GPSstuff();
-  HOUSEKEEPINGstuff();
-  SENSORstuff();
-  updateCharsToSend();
+	HOUSEKEEPINGstuff();
+	SENSORstuff();
+	updateCharsToSend();
 
-  
-  //if(newdata){
-    
-	  // longBalloonLat = (unsigned long) (longBalloonLat*100000);
-	  // longlongBalloonLon = (unsigned long) (longBalloonLon*100000);
-	  // longBalloonAlt = (unsigned long) (longBalloonAlt*100);
-	  // longBalloonTime = (unsigned long) (balloonTime*100);
-	  	
-	  
-	  
-	//  writeArray=CharsToSend;
-	//  wrPtr=&writeArray;
 
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-	//
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-	//  
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,4));
-	//
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-	//
-	//  Serial.println((unsigned int)getIntFromByte(wrPtr,2));
-	//  
-	//  Serial.println((unsigned long)getIntFromByte(wrPtr,3));
-	//
-	//  Serial.println((char)getIntFromByte(wrPtr,1));
-	//
-	//  Serial.println((char)getIntFromByte(wrPtr,1));
-	//
-	//  Serial.println((char)getIntFromByte(wrPtr,1));
-	  
-	  //lineCount; //Wierd. This must be here for linecount to increment in the requestEvent()
-	  //lineCount++; // increments in updateCharsToSend
-  //}
+	// if(newdata){
+
+		// longBalloonLat = (unsigned long) (longBalloonLat*100000);
+		// longlongBalloonLon = (unsigned long) (longBalloonLon*100000);
+		// longBalloonAlt = (unsigned long) (longBalloonAlt*100);
+		// longBalloonTime = (unsigned long) (balloonTime*100);
+
+
+	writeArray=CharsToSend;
+	wrPtr=&writeArray;
+
+	Serial.print((unsigned long)getIntFromByte(wrPtr,2));
+	Serial.print(" ");
+	Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+	Serial.print(" ");
+	Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+	Serial.print(" ");
+	Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+	Serial.print(" ");
+	Serial.print((unsigned int)getIntFromByte(wrPtr,2));
+	Serial.print(" ");
+	Serial.print((unsigned int)getIntFromByte(wrPtr,2));
+	Serial.print(" ");
+	Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+	Serial.print(" ");
+	Serial.print((unsigned int)getIntFromByte(wrPtr,2));
+	Serial.print(" ");
+	Serial.print((char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.print((char)getIntFromByte(wrPtr,1));
+	Serial.print(" ");
+	Serial.println((char)getIntFromByte(wrPtr,1));
   
 
 	Serial.print("LAT: ");
@@ -308,7 +313,7 @@ void updateCharsToSend(){
 	for(i=0;i<LineLength;i++){
 		sum += (unsigned char)CharsToSend[i];
 	}
-	CharsToSend[LineLength] = (sum%64);
+	CharsToSend[LineLength] = (sum%64) + 1;
 }
 
 
