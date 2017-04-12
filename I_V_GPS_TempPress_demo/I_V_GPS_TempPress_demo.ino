@@ -76,7 +76,7 @@ unsigned long longBalloonPressure = 700; //in decaPascels *10^2;
 unsigned int intBalloonExtTemp = 800; // in 10-bit voltage count 
 float Temp;
 float Pressure;
-double TherTemp;
+//double TherTemp;
 
 //For sending
 char endLine[3] = {'E', 'N', 'D'};
@@ -117,6 +117,12 @@ void setup() {
 	Wire.onRequest(requestEvent); // register event
 
 	updateCharsToSend();
+	
+	double Vvoltread;    // read the input pin
+	double Ivoltread;    // read the input pin
+	double Vin;    // read the input pin
+	double Iin;    // read the input pin      
+	
   
 }
 
@@ -187,10 +193,10 @@ void loop() {
 	Serial.println(longBalloonTime);
 	//Serial.println("");
 
-	double Vvoltread = (5*Vcount)/256;    // read the input pin
-	double Ivoltread = (5*Icount)/256;    // read the input pin
-	double Vin = 3.4976*Vvoltread - 0.2541;    // read the input pin
-	double Iin = 0.1116*Ivoltread - 0.0009;    // read the input pin
+	Vvoltread = (5*Vcount)/256;    // read the input pin
+	Ivoltread = (5*Icount)/256;    // read the input pin
+	Vin = 3.4976*Vvoltread - 0.2541;    // read the input pin
+	Iin = 0.1116*Ivoltread - 0.0009;    // read the input pin
 
 	Serial.print("\nV Value: ");         
 	Serial.print(Vcount);      
@@ -206,7 +212,7 @@ void loop() {
 	Serial.print(Iin);         
 	Serial.print("\n");  
 
-	double Pressure = (float)P / 100;
+	Pressure = (float)P / 100;
 
 	Serial.print("Temperature = ");
 	Serial.println(Temp);
@@ -364,7 +370,6 @@ void GPSstuff() {
 	}
 	if (newdata) {  // if locked
 		gpsdump(gps);
-		 
 
 		//using GPS ------------------------------------------------------------------------------------------
 		Serial.println("LOCKED ON");
@@ -401,10 +406,10 @@ void HOUSEKEEPINGstuff() {
 
 	Vread = round(analogRead( analogPinV )/4);    // read the input pin
 	Iread = round(analogRead( analogPinI )/4);    // read the input pin
-	double Vvoltread = (5*Vread)/256;    // read the input pin
-	double Ivoltread = (5*Iread)/256;    // read the input pin
-	double Vin = 3.2206*Vvoltread - 0.086;    // read the input pin
-	double Iin = 0.1116*Ivoltread - 0.0009;    // read the input pin
+	//double Vvoltread = (5*Vread)/256;    // read the input pin
+	//double Ivoltread = (5*Iread)/256;    // read the input pin
+	//double Vin = 3.2206*Vvoltread - 0.086;    // read the input pin
+	//double Iin = 0.1116*Ivoltread - 0.0009;    // read the input pin
 
 	//Serial.print("\nV Value: ");         
 	//Serial.print(Vread);      
@@ -459,18 +464,20 @@ void SENSORstuff() {
 	P  = ((int64_t)D1 * SENS / 2097152 - OFF) / 16384;//32768;// instead of /(2^15) we /(2^14) to have realistic results of pressure
 	Pressure = (float)P / 100;
 	longBalloonPressure = P;
-	Serial.print("Actual TEMP= ");
-	Serial.println(Temp);
-	Serial.print("Actual PRESSURE= ");
-	Serial.println(Pressure);
-	Serial.println("");
+	// Serial.print("Actual TEMP= ");
+	// Serial.println(Temp);
+	// Serial.print("Actual PRESSURE= ");
+	// Serial.println(Pressure);
+	// Serial.println("");
 
 	intBalloonExtTemp = analogRead( ThermistorPIN );
-	TherTemp = Thermistor(intBalloonExtTemp);           // read ADC and convert it to Celsius
-	Serial.print(", Celsius: "); printDouble(TherTemp,3);     // display Celsius
-	TherTemp = (TherTemp * 9.0)/ 5.0 + 32.0;                      // converts to Fahrenheit
-	Serial.print(", Fahrenheit: "); printDouble(TherTemp,3);  // display Fahrenheit
-	Serial.println("");                                   // End of Line
+	// TherTemp = Thermistor(intBalloonExtTemp);           // read ADC and convert it to Celsius
+	// Serial.print(", Celsius: "); 
+	// printDouble(TherTemp,3);     // display Celsius
+	// TherTemp = (TherTemp * 9.0)/ 5.0 + 32.0;                      // converts to Fahrenheit
+	// Serial.print(", Fahrenheit: "); 
+	// printDouble(TherTemp,3);  // display Fahrenheit
+	// Serial.println("");                                   // End of Line
 }
 
 // functions for Sensor------------------------------------------------------------------------------------------
