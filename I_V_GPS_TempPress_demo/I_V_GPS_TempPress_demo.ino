@@ -85,7 +85,7 @@ char endLine[3] = {'E', 'N', 'D'};
 unsigned char* CharsToSend;// = "HELLO!!!!!!!!!!!!!!!!!!!!!!!!!!!";// malloc(32);
 unsigned char* writeTo=CharsToSend;
 //unsigned char* writeArray=CharsToSend;
-//unsigned char** wrPtr=&writeArray;
+unsigned char** wrPtr=&writeTo;
 
 bool newdata = false;
 unsigned short LineLength = 29; //excludes checksum byte
@@ -137,8 +137,8 @@ void loop() {
 		// longBalloonTime = (unsigned long) (balloonTime*100);
 
 
-	writeArray=CharsToSend;
-	wrPtr=&writeArray;
+	writeTo=CharsToSend;
+	wrPtr=&writeTo;
 
 	Serial.print((unsigned long)getIntFromByte(wrPtr,2));
 	Serial.print(" ");
