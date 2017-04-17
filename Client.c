@@ -18,6 +18,7 @@
 #define DATA_TO_MOUNT_RATE 4 // number of seconds between data sent to mount
 #define LINE_LENGTH 29
 #define RECV_BUFF_ARRAY_LENGTH 2896
+#define STARTING_SOCKET_NUMBER 5000
 
 //prototyping
 unsigned long getIntFromByte(unsigned char** , short);
@@ -98,10 +99,10 @@ int main(int argc, char *argv[])
 	}
 	
 	//look at SocketNum file to check what number to start with
-	SocketNumFile = fopen(SocketNumFileName, "r");
-	fread(SocketNumFileData, 2, 1, SocketNumFile);
-	fclose(SocketNumFile);
-	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
+	//SocketNumFile = fopen(SocketNumFileName, "r");
+	//fread(SocketNumFileData, 2, 1, SocketNumFile);
+	//fclose(SocketNumFile);
+	startingSocketNum = STARTING_SOCKET_NUMBER ;
 	
 	// Initialize it to be null
 	filePointer = NULL;
@@ -297,16 +298,9 @@ int main(int argc, char *argv[])
 
 		}
 		
-		
-		
 		//delay
 		nanosleep(&req,&rem);
 	}
-
-    //if(n < 0)
-    //{
-    //    printf("\n Read error \n");
-    //} 
 
     return 0;
 }
@@ -348,9 +342,12 @@ int tryNewSocketConnection(){
 	//if connection was already made but then was broken and tryNewSocketConnection() was called again, this if statment will increment the socketnumber and reset the connecting flag (madeConnection) before continuing
 	if (madeConnection == 1){
 		close(ServerFileNum);
-		startingSocketNum++;
+		
 		madeConnection = 0;
 	}
+	
+	// rotating through the 3 socket numbers looking for the correct number
+	startingSocketNum = STARTING_SOCKET_NUMBER + ((startingSocketNum+1) - STARTING_SOCKET_NUMBER )%3;
 	
 	if((ServerFileNum = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
@@ -387,10 +384,10 @@ int tryNewSocketConnection(){
 	
 	//Only makes it this far if none of the above errors have occured.
 	//Connection was made therefor the SocketNumber file but be updated
-	SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
-	SocketNumFile = fopen(SocketNumFileName, "w");
-	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
-	fclose(SocketNumFile);
+	//SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
+	//SocketNumFile = fopen(SocketNumFileName, "w");
+	//fwrite(SocketNumFileData, 2, 1, SocketNumFile);
+	//fclose(SocketNumFile);
 	
 	madeConnection = 1;
 	

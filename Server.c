@@ -43,6 +43,7 @@ void ResetArduino(void);
 // The slave Arduino info
 #define ADDRESS 0x04
 #define ARDUINO_RESET_PIN 26
+#define STARTING_SOCKET_NUMBER 5000
 
 // The I2C bus: This is for V2 pi's. For V1 Model B you need i2c-0
 static const char *devName = "/dev/i2c-1";
@@ -50,7 +51,7 @@ static const char *SocketNumFileName = "SocketNumber.txt";
 
 //Globals
 char recvBuf[500];
-unsigned short startingSocketNum;
+unsigned int startingSocketNum;
 short madeConnection = 0; //becomes true when connection is made. If connection is lost afterwards (meaning when madeConnection is true), the port number is incremented and madeConnection is set to false till another connection is found.
 FILE *SocketNumFile;
 char SocketNumFileData[5];
@@ -114,13 +115,13 @@ int main(int argc, char *argv[])
 	initArduinoReset(); 
 	
 	//set sleep duration
-	req.tv_nsec = 5000000; //5ms. effects stuff near line 160, its a forced sleep till reset
+	req.tv_nsec = 50000000; //50ms. effects stuff near line 160, its a forced sleep till reset
 	
 	//look at SocketNum file to check what number to start with
-	SocketNumFile = fopen(SocketNumFileName, "r");
-	fread(SocketNumFileData, 2, 1, SocketNumFile);
-	fclose(SocketNumFile);
-	startingSocketNum = SocketNumFileData[0] << 8 | SocketNumFileData[1];
+	//SocketNumFile = fopen(SocketNumFileName, "r");
+	//fread(SocketNumFileData, 2, 1, SocketNumFile);
+	//fclose(SocketNumFile);
+	startingSocketNum = STARTING_SOCKET_NUMBER;
 	
 	///////////////////////////////////////////////REMOVE AFTER TEST///////////////////////////////////////////////////////////////////
 	//SetNewData(GPSLocCounter);
@@ -129,163 +130,160 @@ int main(int argc, char *argv[])
     while(1)
     {
         // start clocks
-		//clock_gettime(CLOCK_MONOTONIC, &RFstart);
 		clock_gettime(CLOCK_MONOTONIC, &GPSstart);
 		
 		// try to make a connection
 		tryNewSocketConnection();
-		fprintf(stderr, "Connected\n");
-		connectionError = 0;
-		strikes = 0;
 		
-		while (connectionError >= 0){
+		if(madeConnection == 1){
+			fprintf(stderr, "Connected\n");
+			connectionError = 0;
+			strikes = 0;
 			
-			api_watchdog_setTime(6); // 6 second timer
-			
-			clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
-			if(((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
+			while (connectionError >= 0){
 				
-				// reset clock
-				clock_gettime(CLOCK_MONOTONIC, &GPSstart);
+				api_watchdog_setTime(6); // 6 second timer
 				
-				// keeps reading till a good message gets through
-				arduinoResets = 0;
-				i2cDropCount = 0;
-				i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
-				while(!CheckSumMatches(i2cDataPrechecked, dataLineLength)){
-					i2cDropCount++;
-					fprintf(stderr, "i2cData dropped");
+				clock_gettime(CLOCK_MONOTONIC, &GPSstop); //taking new time measurement
+				if(((GPSstop.tv_nsec + GPSstop.tv_sec*1.0e9) - (GPSstart.tv_nsec + GPSstart.tv_sec*1.0e9)) > GPStimeNanoSec){
 					
-					if(i2cDropCount >= 3){ // if data is dropped 3 times in a row, arduino will be reset
-						watchdogReturn = api_watchdog_hwfeed();
-						i2cDropCount = 0; // restes to zero
-						if(arduinoResets >= 3){ // Arduino has had to reset 3 times, Pi will be reset
-							api_watchdog_setTime(1); // 1 second timer
-							for(i=0;i<300;i++){ // will sleep for 5ms * 300 = 1.5 seconds. should only take 1 second
-								nanosleep(&req,&rem);
+					// reset clock
+					clock_gettime(CLOCK_MONOTONIC, &GPSstart);
+					
+					// keeps reading till a good message gets through
+					arduinoResets = 0;
+					i2cDropCount = 0;
+					i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
+					while(!CheckSumMatches(i2cDataPrechecked, dataLineLength)){
+						i2cDropCount++;
+						fprintf(stderr, "i2cData dropped");
+						
+						if(i2cDropCount >= 3){ // if data is dropped 3 times in a row, arduino will be reset
+							watchdogReturn = api_watchdog_hwfeed();
+							i2cDropCount = 0; // restes to zero
+							if(arduinoResets >= 3){ // Arduino has had to reset 3 times, Pi will be reset
+								api_watchdog_setTime(1); // 1 second timer
+								for(i=0;i<300;i++){ // will sleep for 5ms * 300 = 1.5 seconds. should only take 1 second
+									nanosleep(&req,&rem);
+								}
 							}
+							
+							ResetArduino();
+							arduinoResets++;
 						}
 						
-						ResetArduino();
-						arduinoResets++;
+						i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
 					}
 					
-					i2cReadStatus = read(i2cfile, i2cDataPrechecked, dataLineLength+1); //The +1 is to also read the checksum
-				}
-				
-				
-				
-				
-				// copies the data 				
-				for(i=0;i<dataLineLength;i++){
-					recvBuf[i] = i2cDataPrechecked[i];
-				}
-				
-				// if(counter%1400 == 0){
-					// GPSLocCounter++;
-					// if (GPSLocCounter > 23){
-						// GPSLocCounter = 0;
+					// copies the data 				
+					for(i=0;i<dataLineLength;i++){
+						recvBuf[i] = i2cDataPrechecked[i];
+					}
+					
+					// if(counter%1400 == 0){
+						// GPSLocCounter++;
+						// if (GPSLocCounter > 23){
+							// GPSLocCounter = 0;
+						// }
+						
+						// SetNewGPS(GPSLocCounter);
 					// }
 					
-					// SetNewGPS(GPSLocCounter);
-				// }
+					TripleData();
+					
+				}
 				
-				TripleData();
+				// update counter
+				updateLineCounter();
 				
-			}
-			
-			// update counter
-			updateLineCounter();
-			
-			
-			startElementForSending = 0;
-			// tries to send data, if available space in buffer is less than the data length, the loop will keep trying to send till the buffer clears up enough to send it.
-			// send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
-			do{
-				satisfied = 0;
+				
+				startElementForSending = 0;
+				// tries to send data, if available space in buffer is less than the data length, the loop will keep trying to send till the buffer clears up enough to send it.
+				// send() was used instead of write() because send() have the flag argument as the last argument. MSG_NOSIGNAL as the flag is required because it tells send() to not exit/return errors if the connection is dropped.
 				do{
-					bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, 0);
-					if (bytesSentCounter < 0){
-						if(errno == EAGAIN || errno == EWOULDBLOCK){
-							watchdogReturn = api_watchdog_hwfeed();	
-							smallStrikes++;
-							if(smallStrikes >= 3){
+					satisfied = 0;
+					do{
+						bytesSentCounter = send(ServerFileNum, &recvBuf[startElementForSending], totalBytesToSend, 0);
+						if (bytesSentCounter < 0){
+							if(errno == EAGAIN || errno == EWOULDBLOCK){
+								watchdogReturn = api_watchdog_hwfeed();	
+								smallStrikes++;
+								if(smallStrikes >= 3){
+									satisfied = 1;
+									strikes = 4; // will cause the program to try and reconnect
+								}
+							} else if(errno == EPIPE){
 								satisfied = 1;
 								strikes = 4; // will cause the program to try and reconnect
 							}
-						} else if(errno == EPIPE){
+						} else{
 							satisfied = 1;
-							strikes = 4; // will cause the program to try and reconnect
+							startElementForSending += bytesSentCounter;
 						}
-					} else{
-						satisfied = 1;
-						startElementForSending += bytesSentCounter;
-					}
-				}while(satisfied == 0); // keeps running till the commands goes through (if blocked due to data over flow) or 
-			}while((bytesSentCounter >= 0) && (startElementForSending < totalBytesToSend)); // keeps writing till buffer is full
-			counter++;
-			
-			if(bytesSentCounter < 0 || startElementForSending == 0){
-				strikes++;
-			} else{
-				strikes == 0;
+					}while(satisfied == 0); // keeps running till the commands goes through (if blocked due to data over flow) or 
+				}while((bytesSentCounter >= 0) && (startElementForSending < totalBytesToSend)); // keeps writing till buffer is full
+				counter++;
+				
+				if(bytesSentCounter < 0 || startElementForSending == 0){
+					strikes++;
+				} else{
+					strikes == 0;
+				}
+				
+				if (strikes < 3){
+					watchdogReturn = api_watchdog_hwfeed();	
+				} else {
+					connectionError = -1;
+				}
+				
+				if(counter%500 == 0){
+					unsigned char* writeArray=recvBuf;
+					unsigned char** wrPtr=&writeArray;
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
+				
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
+			  
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
+
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+			  
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
+					
+					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
+
+					fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
+
+					fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
+
+					fprintf(stderr, "%c\n", (char)getIntFromByte(wrPtr,1));
+				}
+				
 			}
-			
-			if (strikes < 3){
-				watchdogReturn = api_watchdog_hwfeed();	
-			} else {
-				connectionError = -1;
+			if(connectionError != 0){
+				watchdogReturn = api_watchdog_hwfeed();
+				api_watchdog_setTime(15); // 15 second timer
 			}
-			
-			if(counter%500 == 0){
-				unsigned char* writeArray=recvBuf;
-				unsigned char** wrPtr=&writeArray;
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
-			
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
-		  
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
-
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
-
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-		  
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
-				
-				fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,2));
-
-				fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
-
-				fprintf(stderr, "%c", (char)getIntFromByte(wrPtr,1));
-
-				fprintf(stderr, "%c\n", (char)getIntFromByte(wrPtr,1));
-			}
-			
 		}
-		if(connectionError != 0){
-			watchdogReturn = api_watchdog_hwfeed();
-			api_watchdog_setTime(15); // 15 second timer
-		}
-		
 		
 		//delay
 		nanosleep(&req,&rem);
-		
 		
     }
 	fprintf(stderr, "Finished sending");
@@ -303,18 +301,18 @@ void ResetArduino(void){
 	int i;
 	
 	//set sleep duration
-	req.tv_nsec = 50000000; //50ms
+	req.tv_nsec = 10000000; //10ms
 	
 	// Sends LOW to Arduino reset pin, cause it to reset
-	digitalWrite( ARDUINO_RESET_PIN , LOW);
+	digitalWrite( ARDUINO_RESET_PIN , LOW );
 	
 	//delay to ensure it got the message
-	for(i=0;i<40;i++){ // will sleep for 5ms * 300 = 1.5 seconds. should only take 1 second
+	for(i=0;i<30;i++){ // will sleep for 10ms * 30 = 0.3 seconds.
 		nanosleep(&req,&rem);
 	}
 	
 	// Sends HIGH to Arduino reset pin, allowing it to turn on as normal
-	digitalWrite( ARDUINO_RESET_PIN , HIGH);
+	digitalWrite( ARDUINO_RESET_PIN , HIGH );
 }
 
 // "pet" watchdog
@@ -611,7 +609,9 @@ bool CheckSumMatches(char* arrayToCheck, short dataLength){ //dataLength exclude
 	for(i=0;i<dataLength;i++){
 		summedAmount += (unsigned char)arrayToCheck[i];
 	}
-	if((unsigned char)arrayToCheck[dataLength] == (unsigned char)(summedAmount%64)){
+	
+	// the +1 is to be sure its never 0. 0 sometimes appears in error, this would prevent an errored message from being accepted.
+	if((unsigned char)arrayToCheck[dataLength] == (unsigned char)(summedAmount%64) + 1){
 		passesCheck = true;
 	}
 	
@@ -623,52 +623,54 @@ bool CheckSumMatches(char* arrayToCheck, short dataLength){ //dataLength exclude
 void tryNewSocketConnection(){
 	
 	fprintf(stderr, "trying to connect\n");
-	
+
 	//if connection was already made but then was broken and tryNewSocketConnection() was called again, this if statment will increment the socketnumber and reset the connecting flag (madeConnection) before continuing
 	if (madeConnection == 1){
 		close(ServerFileNum);
-		startingSocketNum++;
+		startingSocketNum = STARTING_SOCKET_NUMBER + ((startingSocketNum+1) - STARTING_SOCKET_NUMBER)%3;
 		madeConnection = 0;
 	}
 	
 	int listenfd = 0;
-    struct sockaddr_in serv_addr;
+	struct sockaddr_in serv_addr;
 	struct sigaction handler;
 	struct timeval tv;
-	
+
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
-    memset(&serv_addr, '0', sizeof(serv_addr));
+	memset(&serv_addr, '0', sizeof(serv_addr));
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(startingSocketNum); 
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv_addr.sin_port = htons(startingSocketNum); 
 
-    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-    listen(listenfd, 10);
-	
+	bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+	listen(listenfd, 10);
+
 	// set a timeout for you  commands
 	tv.tv_sec = 1;  /* 1 Secs Timeout */
 	tv.tv_usec = 0;  // Not init'ing this can cause strange errors
 	setsockopt(listenfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(struct timeval));
-	 
+
 	ServerFileNum = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
-	// Setup Action Handler
-	handler.sa_handler = SIG_IGN; // Ignore signal
-	sigemptyset(&handler.sa_mask);
-	handler.sa_flags=0;
-	if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
-		perror(0);
+	if(ServerFileNum >= 0){
+		// Setup Action Handler
+		handler.sa_handler = SIG_IGN; // Ignore signal
+		sigemptyset(&handler.sa_mask);
+		handler.sa_flags=0;
+		if (sigaction(SIGPIPE,&handler,0) < 0){ // Setup signal
+			perror(0);
+		}
+
+		//Only makes it this far if none of the above errors have occured.
+		//Connection was made therefor the SocketNumber file but be updated
+		//SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
+		//SocketNumFile = fopen(SocketNumFileName, "w");
+		//fwrite(SocketNumFileData, 2, 1, SocketNumFile);
+		//fclose(SocketNumFile);
+
+		madeConnection = 1;
 	}
-	
-	//Only makes it this far if none of the above errors have occured.
-	//Connection was made therefor the SocketNumber file but be updated
-	SocketNumFileData[1] = (char)(((unsigned short)SocketNumFileData[1]) + 1); //increments the socket number by 1 
-	SocketNumFile = fopen(SocketNumFileName, "w");
-	fwrite(SocketNumFileData, 2, 1, SocketNumFile);
-	fclose(SocketNumFile);
-	
-	madeConnection = 1;
 }
 
 
