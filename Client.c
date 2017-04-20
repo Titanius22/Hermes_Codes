@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	//char fileName[] = "DistanceTestFULLER";
 	//char fileExt[] = ".txt";
 	char fullFilePath[80];
-	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL";
+	char mostFilePath[] = "/home/alarm/randomJunk/cCodeTests/DistanceTest/DistanceTestFULL0001";
 	int mostFilePathLength = 63;
 	FILE *filePointer;
 	unsigned char* writeArray;
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
 						//strcpy(fullFilePath, filepath);
 						//strcat(fullFilePath, fileName);
 						strcpy(fullFilePath, mostFilePath);
-						strcpy(&fullFilePath[mostFilePathLength], fileCounter);
+						//strcpy(&fullFilePath[mostFilePathLength], fileCounter);
 						
 						//strcat(fullFilePath, fileCounter);
 						//strcat(fullFilePath, fileExt);
@@ -339,10 +339,11 @@ short findOffset(char* offsetingArray, short lengthOfArray, short lengthOfLine){
 //SERVER STUFF. setting up socket
 int tryNewSocketConnection(){
 
+	fprintf(stderr, "Trying new connection\n");
+	
 	//if connection was already made but then was broken and tryNewSocketConnection() was called again, this if statment will increment the socketnumber and reset the connecting flag (madeConnection) before continuing
 	if (madeConnection == 1){
 		close(ServerFileNum);
-		
 		madeConnection = 0;
 	}
 	

@@ -180,13 +180,13 @@ int main(int argc, char *argv[])
 						recvBuf[i] = i2cDataPrechecked[i];
 					}
 					
-					// if(counter%1400 == 0){
+					// SetNewGPS(GPSLocCounter);
+					
+					// if(counter%1500 == 0){
 						// GPSLocCounter++;
 						// if (GPSLocCounter > 23){
 							// GPSLocCounter = 0;
-						// }
-						
-						// SetNewGPS(GPSLocCounter);
+						// }						
 					// }
 					
 					TripleData();
@@ -307,7 +307,7 @@ void ResetArduino(void){
 	digitalWrite( ARDUINO_RESET_PIN , LOW );
 	
 	//delay to ensure it got the message
-	for(i=0;i<30;i++){ // will sleep for 10ms * 30 = 0.3 seconds.
+	for(i=0;i<50;i++){ // will sleep for 10ms * 50 = 0.5 seconds.
 		nanosleep(&req,&rem);
 	}
 	
