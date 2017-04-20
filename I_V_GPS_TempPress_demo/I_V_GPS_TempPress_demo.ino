@@ -201,10 +201,6 @@ void loop() {
 	Serial.println(Temp);
 	Serial.print("Pressure = ");
 	Serial.println(Pressure);
-
-
-
-	delay(500);
 }
 
 // function that executes whenever data is requested by master
@@ -368,7 +364,7 @@ void GPSstuff() {
 void gpsdump(TinyGPS &gps) {
 	longBalloonAlt = gps.altitude();
 	gps.get_position(&longBalloonLat, &longBalloonLon, &age);
-  	longBalloonLon = -longBalloonLon;
+  longBalloonLon = -longBalloonLon;
 	gps.get_datetime(&longBalloonDate, &longBalloonTime, &age);
 	timeConvert(longBalloonTime);
 }
@@ -389,8 +385,8 @@ void HOUSEKEEPINGstuff() {
 
 	Vread = round(analogRead( analogPinV )/4);    // read the input pin
 	Iread = round(analogRead( analogPinI )/4);    // read the input pin
-	Vvoltread = (5*Vcount)/256;    // read the input pin
-	Ivoltread = (5*Icount)/256;    // read the input pin
+	Vvoltread = (5*Vread)/255;    // read the input pin
+	Ivoltread = (5*Iread)/255;    // read the input pin
 	Vin = 3.4976*Vvoltread - 0.2541;    // read the input pin
 	Iin = 0.1116*Ivoltread - 0.0009;    // read the input pin
 
