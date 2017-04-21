@@ -256,13 +256,9 @@ int main(int argc, char *argv[])
 					
 					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
 					
-					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+					fprintf(stderr, "%d ", (int)getIntFromByte(wrPtr,2));
 					
-					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-					
-					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
-					
-					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,1));
+					fprintf(stderr, "%d ", (int)getIntFromByte(wrPtr,2));
 			  
 					fprintf(stderr, "%d ", (unsigned int)getIntFromByte(wrPtr,3));
 					
