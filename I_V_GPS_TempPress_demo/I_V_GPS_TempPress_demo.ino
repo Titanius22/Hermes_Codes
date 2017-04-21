@@ -84,8 +84,8 @@ char endLine[3] = {'E', 'N', 'D'};
 //char* CharsToSend = malloc(24);
 unsigned char* CharsToSend;// = "HELLO!!!!!!!!!!!!!!!!!!!!!!!!!!!";// malloc(32);
 unsigned char* writeTo=CharsToSend;
-//unsigned char* writeArray=CharsToSend;
-//unsigned char** wrPtr=&writeArray;
+unsigned char* writeArray=CharsToSend;
+unsigned char** wrPtr=&writeArray;
 
 float Vvoltread;    // read the input pin
 float Ivoltread;    // read the input pin
@@ -170,37 +170,37 @@ void loop() {
 	Serial.print(" ");
 	Serial.println((char)getIntFromByte(wrPtr,1));
 	*/
-
-	Serial.print("LAT: ");
-	Serial.println(longBalloonLat);
-	Serial.print("LON: ");
-	Serial.println(longBalloonLon);
-	Serial.print("ALT: ");
-	Serial.println(longBalloonAlt);
-	Serial.print("DATE: ");
-	Serial.println(longBalloonDate);
-	Serial.print("TIME: ");
-	Serial.println(longBalloonTime);
-	//Serial.println("");
-
-	Serial.print("\nV Value: ");         
-	Serial.print(Vcount);      
-	Serial.print(", ");       
-	Serial.print(Vvoltread);   
-	Serial.print(", ");       
-	Serial.print(Vin);          
-	Serial.print("\nI Value: ");    
-	Serial.print(Icount);
-	Serial.print(", ");
-	Serial.print(Ivoltread);    
-	Serial.print(", ");      
-	Serial.print(Iin);         
-	Serial.print("\n");  
-
-	Serial.print("Temperature = ");
-	Serial.println(Temp);
-	Serial.print("Pressure = ");
-	Serial.println(Pressure);
+//
+//	Serial.print("LAT: ");
+//	Serial.println(longBalloonLat);
+//	Serial.print("LON: ");
+//	Serial.println(longBalloonLon);
+//	Serial.print("ALT: ");
+//	Serial.println(longBalloonAlt);
+//	Serial.print("DATE: ");
+//	Serial.println(longBalloonDate);
+//	Serial.print("TIME: ");
+//	Serial.println(longBalloonTime);
+//	//Serial.println("");
+//
+//	Serial.print("\nV Value: ");         
+//	Serial.print(Vcount);      
+//	Serial.print(", ");       
+//	Serial.print(Vvoltread);   
+//	Serial.print(", ");       
+//	Serial.print(Vin);          
+//	Serial.print("\nI Value: ");    
+//	Serial.print(Icount);
+//	Serial.print(", ");
+//	Serial.print(Ivoltread);    
+//	Serial.print(", ");      
+//	Serial.print(Iin);         
+//	Serial.print("\n");  
+//
+//	Serial.print("Temperature = ");
+//	Serial.println(Temp);
+//	Serial.print("Pressure = ");
+//	Serial.println(Pressure);
 }
 
 // function that executes whenever data is requested by master
@@ -340,13 +340,13 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
 void GPSstuff() {
 	newdata = false;
-	int64_t hack = millis();
-	if (hack - start > 250) {     // Update every 1 seconds
-		start = hack;
-		if (feedgps()){                    // if serial1 is available and can read gps.encode
-			newdata = true;
+	//int64_t hack = millis();
+	//if (hack - start > 250) {     // tryies to get data every 1/4 second (continuously tryes till data is obtained, then it waits again)
+		if (feedgps()){             // if serial1 is available and can read gps.encode
+			//start = hack;             // resets timer
+			newdata = true;           // data is ready
 		}
-	}
+	//}
 	if (newdata) {  // if locked
 		gpsdump(gps);
 
@@ -367,6 +367,80 @@ void gpsdump(TinyGPS &gps) {
   longBalloonLon = -longBalloonLon;
 	gps.get_datetime(&longBalloonDate, &longBalloonTime, &age);
 	timeConvert(longBalloonTime);
+
+  //if gps.altitude() is 999999999 then it isn't linked yet, forced it back to default 30 value
+  if(longBalloonAlt == 999999999){
+    longBalloonAlt = 30;
+  }
+  
+  Serial.print("LAT: ");
+  Serial.println(longBalloonLat);
+  Serial.print("LON: ");
+  Serial.println(longBalloonLon);
+  Serial.print("ALT: ");
+  Serial.println(longBalloonAlt);
+  Serial.print("DATE: ");
+  Serial.println(longBalloonDate);
+  Serial.print("TIME: ");
+  Serial.println(longBalloonTime);
+  //Serial.println("");
+
+  Serial.print("\nV Value: ");         
+  Serial.print(Vcount);      
+  Serial.print(", ");       
+  Serial.print(Vvoltread);   
+  Serial.print(", ");       
+  Serial.print(Vin);          
+  Serial.print("\nI Value: ");    
+  Serial.print(Icount);
+  Serial.print(", ");
+  Serial.print(Ivoltread);    
+  Serial.print(", ");      
+  Serial.print(Iin);         
+  Serial.print("\n");  
+
+  Serial.print("Temperature = ");
+  Serial.println(Temp);
+  Serial.print("Pressure = ");
+  Serial.println(Pressure);
+
+  writeTo=CharsToSend;
+  wrPtr=&writeTo;
+
+  Serial.print((unsigned long)getIntFromByte(wrPtr,2));
+  Serial.print(" ");
+  Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+  Serial.print(" ");
+  Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+  Serial.print(" ");
+  Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+  Serial.print(" ");
+  Serial.print((unsigned int)getIntFromByte(wrPtr,2));
+  Serial.print(" ");
+  Serial.print((unsigned int)getIntFromByte(wrPtr,2));
+  Serial.print(" ");
+  Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.print((unsigned char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.print((unsigned long)getIntFromByte(wrPtr,3));
+  Serial.print(" ");
+  Serial.print((unsigned int)getIntFromByte(wrPtr,2));
+  Serial.print(" ");
+  Serial.print((char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.print((char)getIntFromByte(wrPtr,1));
+  Serial.print(" ");
+  Serial.println((char)getIntFromByte(wrPtr,1));
+  
 }
 
 // Feed data as it becomes available 
