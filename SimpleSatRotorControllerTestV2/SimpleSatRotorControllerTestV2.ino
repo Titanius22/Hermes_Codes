@@ -135,11 +135,11 @@ const byte _G5500RightPin = 12;     // azimuth rotor right control line
 // take care if you lower this value -  wear or dirt on the pots in your rotors
 // or A/D converter jitter may cause hunting if the value is too low. 
 
-long _closeEnough = 500;   // tolerance for az-el match in rotor move in degrees * 100
-long _closeEnoughSmoothing = 1000;   // if within this range (degree * 100), increase pausing between moves to limit current surges
+long _closeEnough = 300;   // tolerance for az-el match in rotor move in degrees * 100
+long _closeEnoughSmoothing = 500;   // if within this range (degree * 100), increase pausing between moves to limit current surges
 
 //Values for calculations
-const float Re = 6378;//[km] 3956.0; //[miles]
+const float Re = 6378;//[km] 
 const float pi = 3.14159265359; 
 float distancefromballoontoGS = 0;   
                                 //ICI//COA//KENNEL CLUB//TEST
@@ -147,8 +147,8 @@ float balloonLat              = 30.32;//29.191585;//29.187366;//29.166656;//34.2
 float balloonLon              = 81.64;//81.046269;//81.049893;//81.080002;//117.6458;//[degrees]
 float balloonAlt              = 0;//10064.0/5280.0;//[miles]
 //Hard coded for ERAU Daytona Beach Campus;//Test values
-float groundStationlat        = 29.187941;//29.187923;//34.22389;//[degrees]
-float groundStationlon        = 81.048325;//81.048635;//118.0603;//[degrees]
+float groundStationlat        = 29.189106;//29.187941;//[degrees]
+float groundStationlon        = 81.048949;//81.048325;//[degrees]
 float groundStationAlt        = 0;//5710.0/5280.0;//[miles]29.187941, -81.048325
 float d; 
 float Azimuth; 
@@ -319,6 +319,8 @@ void loop()
 	//////////////////////////////////////////////////////////////////////////////////////////////////////
 			if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         
+				Serial.println("-----------------------------------------");
+				
 				//unsigned long FirstNum, el; 
 				//unsigned long long lat, lon; 
         
@@ -433,7 +435,9 @@ void loop()
 
 			}
 
-	command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
+  if(balloonLat == 10 && balloonLon == 20 && balloonAlt == 30){
+	  command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
+  }
 
 	/////////////////////////////////////////
 	//command = "W090 090";               ///
@@ -498,7 +502,7 @@ void loop()
               digitalWrite(_G5500UpPin, LOW);
               digitalWrite(_G5500DownPin, LOW);
             
-            } 
+            }
             
             readElevation();
             //Serial.print("Ground Station EL: ");
@@ -636,12 +640,11 @@ long averageRead(byte _InputPin)
 //
 void decodeGS232(char character)
 {
-
     switch (character){
        case 'w':  // gs232 W command
        case 'W':
        {
-          {
+          { 
             _gs232WActice = true;
             _gs232AzElIndex = 0;
           }
@@ -773,7 +776,7 @@ String CreateCommand(float balloonLon, float balloonLat, float balloonAlt, float
   Serial.println("[meters] groundStationAlt: ");
   Serial.println(groundStationAlt);
   groundStationAlt = groundStationAlt/1000;   //[m -> km]
-  balloonAlt = balloonAlt/1000;   //[m -> km]
+  balloonAlt = balloonAlt/100000;   //[cm -> km]
   Serial.println("[miles] groundStationAlt: ");
   Serial.println(groundStationAlt);
       
