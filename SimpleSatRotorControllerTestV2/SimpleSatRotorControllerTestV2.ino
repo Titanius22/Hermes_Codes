@@ -435,7 +435,7 @@ void loop()
 
 			}
 
-  if(balloonLat == 10 && balloonLon == 20 && balloonAlt == 30){
+  if(balloonLat != 10 && balloonLon != 20 && balloonAlt != 30)){
 	  command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
   }
 
