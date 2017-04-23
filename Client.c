@@ -222,7 +222,20 @@ int main(int argc, char *argv[])
 							//write(i2cFile, command, strlen(command));
 							command[0] = '2';
 							stringVarible = recvBuff+offset+2;
-							strncat(command+1, stringVarible, 9);
+							
+							//strncat(command+1, stringVarible, 9);
+							
+							//because strncpy DECIDED TO STOP WORKING!!!!!!! at 12:30am 4/23/2017
+							command[1] = stringVarible[0];
+							command[2] = stringVarible[1];
+							command[3] = stringVarible[2];
+							command[4] = stringVarible[3];
+							command[5] = stringVarible[4];
+							command[6] = stringVarible[5];
+							command[7] = stringVarible[6];
+							command[8] = stringVarible[7];
+							command[9] = stringVarible[8];
+							
 							write(i2cFile, command, 10); // first is '2' command, last 9 is the GPS data
 						}
 					}
