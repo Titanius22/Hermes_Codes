@@ -142,10 +142,10 @@ long _closeEnoughSmoothing = 500;   // if within this range (degree * 100), incr
 const float Re = 6378;//[km] 
 const float pi = 3.14159265359; 
 float distancefromballoontoGS = 0;   
-                                //ICI//COA//KENNEL CLUB//TEST
-float balloonLat              = 30.32;//29.191585;//29.187366;//29.166656;//34.28889;//[degrees]
-float balloonLon              = 81.64;//81.046269;//81.049893;//81.080002;//117.6458;//[degrees]
-float balloonAlt              = 0;//10064.0/5280.0;//[miles]
+                                
+float balloonLat              = 29.160626;//[degrees]
+float balloonLon              = 80.114442;//[degrees]
+float balloonAlt              = 35*100000;//[km](cm*100000)
 //Hard coded for ERAU Daytona Beach Campus;//Test values
 float groundStationlat        = 29.189106;//29.187941;//[degrees]
 float groundStationlon        = 81.048949;//81.048325;//[degrees]
@@ -156,7 +156,6 @@ float Elevation;
 String command = "";
 
 //                        1 latitude longitude elevation
-String RecievedCommand = "2 29 81 22";
 
 //char* CharsToReceive = malloc(22);
 //char* writeArray=CharsToReceive;
@@ -259,13 +258,12 @@ void setup()
 //
 void loop() 
 {
-  //delay(500);
-  //////////////////////////////////////////////////////////////////////////////////////////////////////
-  //Serial.println("");
+    //delay(500);
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    //Serial.println("");
     //if (Serial.available() > 0){
       String temp=Serial.readString();
       
-      //receiveData(RecievedCommand);//NEEDS TO BE DELETED FOR FINAL CODE
       Serial.println("");
       Serial.println("Arduino Working");
 
@@ -277,251 +275,225 @@ void loop()
     if (rtcCurrent > _rtcLastDisplayUpdate){ // overflow if not true    _rotorMoveUpdateInterval
       // update rotor movement if necessary
       //Serial.println("got in2");
-		if (rtcCurrent - _rtcLastRotorUpdate > _rotorMoveUpdateInterval){
-			_rtcLastRotorUpdate = rtcCurrent; // reset rotor move timer base
-			//Serial.println("got in3");
-			// AZIMUTH       
-			readAzimuth(); // get current azimuth from G-5500
+    if (rtcCurrent - _rtcLastRotorUpdate > _rotorMoveUpdateInterval){
+      _rtcLastRotorUpdate = rtcCurrent; // reset rotor move timer base
+      //Serial.println("got in3");
+      // AZIMUTH       
+      readAzimuth(); // get current azimuth from G-5500
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-			Serial.print("(deg) Balloon Lat     : ");
-			Serial.println(balloonLat,6);
-			Serial.print("(deg) Balloon Lon     : ");
-			Serial.println(balloonLon,6);
-			Serial.print("(meters) Balloon Altit: ");
-			Serial.println(balloonAlt,6);
+      Serial.print("(deg) Balloon Lat     : ");
+      Serial.println(balloonLat,6);
+      Serial.print("(deg) Balloon Lon     : ");
+      Serial.println(balloonLon,6);
+      Serial.print("(cm) Balloon Altit    : ");
+      Serial.println(balloonAlt,6);
 
-			Serial.print("(deg) GS Lat          : ");
-			Serial.println(groundStationlat,6);
-			Serial.print("(deg) GS Lon          : ");
-			Serial.println(groundStationlon,6);
-			Serial.print("(deg) GS Altitude     : ");
-			Serial.println(groundStationAlt,6);
+      Serial.print("(deg) GS Lat          : ");
+      Serial.println(groundStationlat,6);
+      Serial.print("(deg) GS Lon          : ");
+      Serial.println(groundStationlon,6);
+      Serial.print("(deg) GS Altitude     : ");
+      Serial.println(groundStationAlt,6);
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-			Serial.print("(deg) AZ Commanded    : ");
-			Serial.println(_newAzimuth/100);
-			Serial.print("(deg) AZ Read         : ");
-			Serial.println(_rotorAzimuth/100);
-			Serial.print("(volt)AZ Voltage Read : ");
-			Serial.println(((float)analogRead(_azimuthInputPin)*5/1024),6);
+      Serial.print("(deg) AZ Commanded    : ");
+      Serial.println(_newAzimuth/100);
+      Serial.print("(deg) AZ Read         : ");
+      Serial.println(_rotorAzimuth/100);
+      Serial.print("(volt)AZ Voltage Read : ");
+      Serial.println(((float)analogRead(_azimuthInputPin)*5/1024),6);
 
-			Serial.print("(deg) EL Commanded    : ");
-			Serial.println(_newElevation/100);
-			Serial.print("(deg) EL Read         : ");
-			Serial.println(_rotorElevation/100);
-			Serial.print("(volt)EL Voltage Read : ");
-			Serial.println(((float)analogRead(_elevationInputPin)*5/1024),6);
+      Serial.print("(deg) EL Commanded    : ");
+      Serial.println(_newElevation/100);
+      Serial.print("(deg) EL Read         : ");
+      Serial.println(_rotorElevation/100);
+      Serial.print("(volt)EL Voltage Read : ");
+      Serial.println(((float)analogRead(_elevationInputPin)*5/1024),6);
 
-			//Serial.print("EL raw Read: ");
-			//Serial.println(analogRead(_elevationInputPin));
-			//Serial.print("AZ raw Read: ");
-			//Serial.println(analogRead(_azimuthInputPin));
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-			if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //Serial.print("EL raw Read: ");
+      //Serial.println(analogRead(_elevationInputPin));
+      //Serial.print("AZ raw Read: ");
+      //Serial.println(analogRead(_azimuthInputPin));
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+      if (Wire.available()){///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         
-				Serial.println("-----------------------------------------");
-				
-				//unsigned long FirstNum, el; 
-				//unsigned long long lat, lon; 
+        Serial.println("-----------------------------------------");
         
-				char CommandChar;
-				Command1inBinary[0] = '\0';
-				Command2inBinary[0] = '\0';
-				Command3 = false;
-				while(Wire.available()) {
-					i = 0;
-					do{
-						if(i == 0){
-							CommandChar = Wire.read();
-							switch(CommandChar){
-								case '1':{ // Changes GS GPS
-									loopCommand = Command1Length;
-									Serial.println("case 1a");
-									break;
-								} 
-								case '2':{ // Changes Balloon GPS
-									loopCommand = Command2Length;
-									Serial.println("case 2a");
-									break;
-								} 
-								case '3':{ //Asks for Az and El
-									loopCommand = Command3Length;
-									Serial.println("case 3a");
-									break;
-								}
-							}
-						}
-						switch(CommandChar){
-							case '1':{ // Changes GS GPS
-								Command1inBinary[i] = Wire.read();
-								Serial.println("case 1b");
-								break;
-							} 
-							case '2':{ // Changes Balloon GPS
-								Command2inBinary[i] = Wire.read();
-                Serial.print(i);
+        //unsigned long FirstNum, el; 
+        //unsigned long long lat, lon; 
+        
+        char CommandChar;
+        Command1inBinary[0] = '\0';
+        Command2inBinary[0] = '\0';
+        Command3 = false;
+        while(Wire.available()) {
+          i = 0;
+          do{
+            if(i == 0){
+              CommandChar = Wire.read();
+              switch(CommandChar){
+                case '1':{ // Changes GS GPS
+                  loopCommand = Command1Length;
+                  Serial.println("case 1a");
+                  break;
+                } 
+                case '2':{ // Changes Balloon GPS
+                  loopCommand = Command2Length;
+                  Serial.println("case 2a");
+                  break;
+                } 
+                case '3':{ //Asks for Az and El
+                  loopCommand = Command3Length;
+                  Serial.println("case 3a");
+                  break;
+                }
+              }
+            }
+            switch(CommandChar){
+              case '1':{ // Changes GS GPS
+                Command1inBinary[i] = Wire.read();
+                Serial.println("case 1b");
+                break;
+              } 
+              case '2':{ // Changes Balloon GPS
+                Command2inBinary[i] = Wire.read();
+                Serial.print(Command2inBinary[i]);
                 Serial.print("----");
-								Serial.println(Command2inBinary[i], HEX);
-								break;
-							} 
-							case '3':{ //Asks for Az and El
-								Command3 = true;
-								Serial.println("case 3b");
-								break;
-							}
-						}
-						i++;
-					}while(i < loopCommand);
-				}
-				
-				// unsigned long returnedData[3]; //Longintude, Latitude, Altitude
-				// char CharsToSend[11];
+                Serial.println(Command2inBinary[i], HEX);
+                break;
+              } 
+              case '3':{ //Asks for Az and El
+                Command3 = true;
+                Serial.println("case 3b");
+                break;
+              }
+            }
+            i++;
+          }while(i < loopCommand);
+        }
+        
+        // unsigned long returnedData[3]; //Longintude, Latitude, Altitude
+        // char CharsToSend[11];
 
-				// char *writeTo=CharsToSend;
-				// unsigned long longBuflatitude;
-				// unsigned long longBuflongitude;
-				// unsigned int intBufaltitude;
+        // char *writeTo=CharsToSend;
+        // unsigned long longBuflatitude;
+        // unsigned long longBuflongitude;
+        // unsigned int intBufaltitude;
 
-				////Latitude * 10^5 positive only----------------should be 10^10-----------
-				// longBuflatitude = (unsigned long)(29.85782 * 100000);
-				// insertBytesFromInt(longBuflatitude, &writeTo, 4);
+        ////Latitude * 10^5 positive only----------------should be 10^10-----------
+        // longBuflatitude = (unsigned long)(29.85782 * 100000);
+        // insertBytesFromInt(longBuflatitude, &writeTo, 4);
 
-				////Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
-				// longBuflongitude = (unsigned long)(45.26487 * 100000);
-				// insertBytesFromInt(longBuflongitude, &writeTo, 4);
+        ////Longitude * 10^5 positive only max of 109 degrees---should be 10^10-----
+        // longBuflongitude = (unsigned long)(45.26487 * 100000);
+        // insertBytesFromInt(longBuflongitude, &writeTo, 4);
 
-				////Altitude * 100--------------------------------------------
-				// intBufaltitude = 489 * 100;
-				// insertBytesFromInt(intBufaltitude, &writeTo, 3);
-				
-				// Command2inBinary = String(CharsToSend);
-				if(Command1inBinary[0] != '\0'){
-					convertBinaryCommands(Command1inBinary, Command1Length, RecievedDataArray);
-					groundStationlat = ((float)RecievedDataArray[0])/100000;
-					groundStationlon = ((float)RecievedDataArray[1])/100000;
-					//groundStationAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles 	
-					groundStationAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles   		
-				}
-				if(Command2inBinary[0] != '\0'){
-					convertBinaryCommands(Command2inBinary, Command2Length, RecievedDataArray);
-					balloonLat = ((float)RecievedDataArray[0])/100000;
-					balloonLon = ((float)RecievedDataArray[1])/100000;
-					//balloonAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles
-					balloonAlt = (((float)RecievedDataArray[2]))/100; //centimeters to hundreds to miles 
-          Serial.println(RecievedDataArray[2]);
-          Serial.println(RecievedDataArray[2]);
-          Serial.println(RecievedDataArray[2]);
-          Serial.println(RecievedDataArray[2]);
-				}
-				if(Command3){
-					/////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-					///////////////DO STUFF/////////////////////////////////////////////////////////////////////////////////////////////////////
-					/////////////////////////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////
-					///////////////////////////////////DO STUFF/////////////////////////////////////////////////////////////////////////////////
-					/////////////////////////////////////////////DO STUFF///////////////////////////////////////////////////////////////////////
-					////////////////////////////////////////////////////////DO STUFF////////////////////////////////////////////////////////////
-				}
+        ////Altitude * 100--------------------------------------------
+        // intBufaltitude = 489 * 100;
+        // insertBytesFromInt(intBufaltitude, &writeTo, 3);
+        
+        // Command2inBinary = String(CharsToSend);
+        if(Command1inBinary[0] != '\0'){
+          convertBinaryCommands(Command1inBinary, Command1Length, RecievedDataArray);
+          groundStationlat = ((float)RecievedDataArray[0])/100000;
+          groundStationlon = ((float)RecievedDataArray[1])/100000;
+          //groundStationAlt = (((float)RecievedDataArray[2])/1609)/100; //hundreds of meters to hundreds of miles to miles   
+          groundStationAlt = (((float)RecievedDataArray[2]))/100; //hundreds of meters to hundreds of miles to miles      
+        }
+        if(Command2inBinary[0] != '\0'){
+          
+          convertBinaryCommands(Command2inBinary, Command2Length, RecievedDataArray);
+          balloonLat = ((float)RecievedDataArray[0])/100000;
+          balloonLon = ((float)RecievedDataArray[1])/100000;
+          balloonAlt = (((float)RecievedDataArray[2]))/100; //centimeters to kilometers
+          Serial.print("balloonLat: ");
+          Serial.println(balloonLat);
+          Serial.print("balloonLon: ");
+          Serial.println(balloonLon);
+          Serial.print("balloonAlt: ");
+          Serial.println(balloonAlt);
+        }
+        if(Command3){
+          /////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+          ///////////////DO STUFF/////////////////////////////////////////////////////////////////////////////////////////////////////
+          /////////////////////////DO STUFF///////////////////////////////////////////////////////////////////////////////////////////
+          ///////////////////////////////////DO STUFF/////////////////////////////////////////////////////////////////////////////////
+          /////////////////////////////////////////////DO STUFF///////////////////////////////////////////////////////////////////////
+          ////////////////////////////////////////////////////////DO STUFF////////////////////////////////////////////////////////////
+        }
 
        
        
-				Serial.print("balloonLat: ");
-				Serial.println(balloonLat);
-				Serial.print("balloonLon: ");
-				Serial.println(balloonLon);
-				Serial.print("balloonAlt: ");
-				Serial.println(balloonAlt);
+        Serial.print("balloonLat: ");
+        Serial.println(balloonLat);
+        Serial.print("balloonLon: ");
+        Serial.println(balloonLon);
+        Serial.print("balloonAlt: ");
+        Serial.println(balloonAlt);
 
-				delay(1000);
+        delay(1000);
 
-			}
+      }
 
-  if(balloonLat != 10 && balloonLon != 20 && balloonAlt != 30){
-	  command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
+  //if(balloonLat != 10 && balloonLon != 20 && balloonAlt != 30){
+    command = CreateCommand(balloonLon, balloonLat, balloonAlt, groundStationlon, groundStationlat, groundStationAlt);//getCommand(temp.charAt(0));
+  //}
+
+  /////////////////////////////////////////
+  //command = "W090 090";               ///
+  /////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+  //Serial.println("Command Sent: " + command);
+  for (i=0; i<=command.length(); i++){
+    decodeGS232(command.charAt(i));
+    //Serial.print(command.charAt(i));
   }
-
-	/////////////////////////////////////////
-	//command = "W090 090";               ///
-	/////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	//Serial.println("Command Sent: " + command);
-	for (i=0; i<=command.length(); i++){
-		decodeGS232(command.charAt(i));
-		//Serial.print(command.charAt(i));
-	}
     
-         
+         readAzimuth();
          if ( (abs(_rotorAzimuth - _newAzimuth) > _closeEnough) && _azimuthMove ) { // see if azimuth move is required
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-            Serial.println("-SHOULD MOVE-!");
-            
+            Serial.println("-SHOULD MOVE AZ");
             updateAzimuthMove();
-
             //ERIKS STUFFS
             if (abs(_rotorAzimuth - _newAzimuth) < _closeEnoughSmoothing){
-              
               delay(500); //Slows mount to limit current surges from changing the voltage
               digitalWrite(_G5500LeftPin, LOW);
               digitalWrite(_G5500RightPin, LOW);
-            
             }
-            
-            readAzimuth();
-            //Serial.print("Ground Station AZ: ");
-            //Serial.println(_rotorAzimuth/100);
             _AZjustmoved = true;
          }
         else{  // no move required - turn off azimuth rotor
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-           Serial.println("-SHOULD NOT MOVE-");
+           Serial.println("-SHOULD NOT MOVE AZ");
            digitalWrite(_G5500LeftPin, LOW);
            digitalWrite(_G5500RightPin, LOW);
            _azimuthMove = false;
            azRotorMovement = "        ";
            if (_AZjustmoved == true){
-              //delay(1000);
-              //Serial.println("");
-              //Serial.print("Initial Command Given: ");
-              //Serial.println(command);
-              //Serial.print("Final Ground Station AZ: ");
-              //Serial.println(_rotorAzimuth/100);
               _AZjustmoved = false;
            }
          }
          
          // ELEVATION       
          readElevation(); // get current elevation from G-5500
-         // see if aelevation move is required
+         // see if elevation move is required
          if ( abs(_rotorElevation - _newElevation) > _closeEnough && _elevationMove ){ // move required{
-
+            Serial.println("-SHOULD MOVE EL");
             updateElevationMove();
-
             //ERIKS STUFFS
             if (abs(_rotorElevation - _newElevation) < _closeEnoughSmoothing){
-              
               delay(500); //Slows mount to limit current surges from changing the voltage
               digitalWrite(_G5500UpPin, LOW);
               digitalWrite(_G5500DownPin, LOW);
-            
             }
-            
-            readElevation();
-            //Serial.print("Ground Station EL: ");
-            //Serial.println(_rotorElevation/100); 
-            //Serial.println(""); 
          }
         else{  // no move required - turn off elevation rotor
+            Serial.println("-SHOULD NOT MOVE EL");
             digitalWrite(_G5500UpPin, LOW);
             digitalWrite(_G5500DownPin, LOW);
             _elevationMove = false;
             elRotorMovement = "        ";
-            
             if (_ELjustmoved == true){
-              //delay(1000);
-              //Serial.println("");
-              //Serial.print("Initial Command Given: ");
-              //Serial.println(command);
-              //Serial.print("Final Ground Station EL: ");
-              //Serial.println(_rotorElevation/100);
               _ELjustmoved = false;
            }
          }            
@@ -545,6 +517,8 @@ void updateElevationMove()
 {          
    // calculate rotor move 
    long rotorMoveEl = _newElevation - _rotorElevation;
+   Serial.print("rotorMoveEl:");
+   Serial.println(rotorMoveEl);
    if (rotorMoveEl > 0){
       elRotorMovement = "  U ";
       elRotorMovement = elRotorMovement + String(_newElevation / 100);
@@ -569,6 +543,8 @@ void updateAzimuthMove()
 {          
      // calculate rotor move 
      long rotorMoveAz = _newAzimuth - _rotorAzimuth;
+     Serial.print("rotorMoveAz:");
+    Serial.println(rotorMoveAz);
      // adjust move if necessary
      if (rotorMoveAz > 18000){ 
         rotorMoveAz = rotorMoveAz - 18000; // adjust move if > 180 degrees
@@ -760,8 +736,8 @@ float findAzimuth(float balloonLon, float balloonLat, float groundStationlon, fl
 float findElevation(float balloonAlt, float groundStationAlt, float d) {
   float el;  // ground station = 1  // balloon = 2
   el = (atan((balloonAlt - groundStationAlt)/(d))) - (d/(Re));
-  Serial.println("d: ");
-  Serial.println(d);
+  //Serial.println("d: ");
+  //Serial.println(d);
   return el;
 }
 
@@ -773,12 +749,12 @@ String CreateCommand(float balloonLon, float balloonLat, float balloonAlt, float
   balloonLon = (balloonLon*pi)/180;              //[deg -> radian]
   groundStationlat = (groundStationlat*pi)/180;  //[deg -> radian]
   groundStationlon = (groundStationlon*pi)/180;  //[deg -> radian]
-  Serial.println("[meters] groundStationAlt: ");
-  Serial.println(groundStationAlt);
+  //Serial.println("[meters] groundStationAlt: ");
+  //Serial.println(groundStationAlt);
   groundStationAlt = groundStationAlt/1000;   //[m -> km]
   balloonAlt = balloonAlt/100000;   //[cm -> km]
-  Serial.println("[miles] groundStationAlt: ");
-  Serial.println(groundStationAlt);
+  //Serial.println("[miles] groundStationAlt: ");
+  //Serial.println(groundStationAlt);
       
   d = findDistance(balloonLon, balloonLat, groundStationlon, groundStationlat);
   
@@ -787,8 +763,8 @@ String CreateCommand(float balloonLon, float balloonLat, float balloonAlt, float
 
   Elevation = findElevation(balloonAlt, groundStationAlt, d);
   Elevation = abs((Elevation*180)/pi);
-  Serial.println("EL: ");
-  Serial.println(Elevation);
+  //Serial.println("EL: ");
+  //Serial.println(Elevation);
   
   command = "W";
   if (Azimuth <= 9){
@@ -814,43 +790,45 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 //unsigned long long getIntFromByte(unsigned char** arrayStart, short bytes){
 
   //Allocating array to read into
-  char* intPtr = malloc (sizeof(unsigned long));
-  unsigned long temp;
+  unsigned char* intPtr=malloc (sizeof(unsigned long long));
+  unsigned long long temp;
   //Void pointer to same location to return
 
-   //Loop Counter
+  //Loop Counter
   short loopCount;
-  for(loopCount=0;loopCount<bytes;loopCount++){
+  for(loopCount=0;loopCount<sizeof(unsigned long);loopCount++){
 
     //Copying bytes from one array to the other
     if(loopCount<bytes){
       intPtr[loopCount]=(*arrayStart)[loopCount];
-    }
+    }else{
+            intPtr[loopCount]=0;
+        }
   }
   *arrayStart+=(short)bytes;
-  temp=*((unsigned long*)intPtr);
+  temp=*((unsigned long long*)intPtr);
   free(intPtr);
   //Returning void pointer (Pointer to an integer with the designated of the number of bytes)
   return temp;
 }
 
-void insertBytesFromInt(long int value,unsigned char** byteStart, short numberBytesToCopy){
+void insertBytesFromInt(void* value,unsigned char** byteStart, short numberBytesToCopy){
 
-  unsigned char* valueBytes=(void*)&value;
+  unsigned char* valueBytes=value;
   short loopCount=0;
   for(loopCount=0;loopCount<numberBytesToCopy;loopCount++){
-    (*byteStart)[loopCount]=valueBytes[loopCount];
+  (*byteStart)[loopCount]=valueBytes[loopCount];
   }
   *byteStart+=(short)numberBytesToCopy;
 }
 
-void convertBinaryCommands(String strBinaryCommand, short len, unsigned long returnedData[3]){
-	char buf[11];
-	strBinaryCommand.toCharArray(buf, len+1); //The +1 is because the toCharArray() function returns an end line and the last element of the length. It needs to return 333\0 or 10 bytes.
+void convertBinaryCommands(char *strBinaryCommand, short len, unsigned long returnedData[3]){
   
-	char* writeArray=buf;
-	char** wrPtr=&writeArray;
-	returnedData[0] = (unsigned long)getIntFromByte(wrPtr,3);
-	returnedData[1] = (unsigned long)getIntFromByte(wrPtr,3);
-	returnedData[2] = (unsigned long)getIntFromByte(wrPtr,3);
+  char* writeArray=strBinaryCommand;
+  char** wrPtr=&writeArray;
+ 
+  returnedData[0] = (unsigned long)getIntFromByte(wrPtr,3);
+  returnedData[1] = (unsigned long)getIntFromByte(wrPtr,3);
+  returnedData[2] = (unsigned long)getIntFromByte(wrPtr,3);
+
 }
