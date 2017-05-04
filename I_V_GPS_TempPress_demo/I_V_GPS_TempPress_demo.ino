@@ -94,7 +94,7 @@ float Iin;    // read the input pin
 
 bool newdata = false;
 unsigned short LineLength = 29; //excludes checksum byte
-int64_t start;
+int64_t start = millis();
 
 void setup() {
 	// for communication with Pi
@@ -131,7 +131,8 @@ void loop() {
 	HOUSEKEEPINGstuff();
 	SENSORstuff();
 	updateCharsToSend(); 	
-	
+  //delay(1000);
+  
 	/*
 	writeTo=CharsToSend;
 	wrPtr=&writeTo;
@@ -171,17 +172,17 @@ void loop() {
 	Serial.println((char)getIntFromByte(wrPtr,1));
 	*/
 //
-//	Serial.print("LAT: ");
-//	Serial.println(longBalloonLat);
-//	Serial.print("LON: ");
-//	Serial.println(longBalloonLon);
-//	Serial.print("ALT: ");
-//	Serial.println(longBalloonAlt);
-//	Serial.print("DATE: ");
-//	Serial.println(longBalloonDate);
-//	Serial.print("TIME: ");
-//	Serial.println(longBalloonTime);
-//	//Serial.println("");
+	Serial.print("LAT: ");
+	Serial.println(longBalloonLat);
+	Serial.print("LON: ");
+	Serial.println(longBalloonLon);
+	Serial.print("ALT: ");
+	Serial.println(longBalloonAlt);
+	Serial.print("DATE: ");
+	Serial.println(longBalloonDate);
+	Serial.print("TIME: ");
+	Serial.println(longBalloonTime);
+	//Serial.println("");
 //
 //	Serial.print("\nV Value: ");         
 //	Serial.print(Vcount);      
@@ -229,6 +230,7 @@ void requestEvent() {
 
 //char* updateCharsToSend(){
 void updateCharsToSend(){
+	noInterrupts();
 	free(CharsToSend);
 	CharsToSend = malloc(LineLength+1);
 	writeTo=CharsToSend;
@@ -299,6 +301,8 @@ void updateCharsToSend(){
 		sum += (unsigned char)CharsToSend[i];
 	}
 	CharsToSend[LineLength] = (sum%64) + 1;
+
+ interrupts();
 }
 
 
@@ -340,24 +344,20 @@ unsigned long getIntFromByte(unsigned char** arrayStart, short bytes){
 
 void GPSstuff() {
 	newdata = false;
-	//int64_t hack = millis();
-	//if (hack - start > 250) {     // tryies to get data every 1/4 second (continuously tryes till data is obtained, then it waits again)
+	int64_t hack = millis();
+  while (hack - start < 1000) {     // tryies to get data every 1/4 second (continuously tryes till data is obtained, then it waits again)
 		if (feedgps()){             // if serial1 is available and can read gps.encode
-			//start = hack;             // resets timer
 			newdata = true;           // data is ready
-		}
-	//}
-	if (newdata) {  // if locked
-		gpsdump(gps);
-
-		//using GPS ------------------------------------------------------------------------------------------
-		Serial.println("LOCKED ON");
-		//Serial.print("Balloon Altitude: ");
-		
-		
-	}else{          // if not locked
-		Serial.println("Not Locked");
-	}
+  	}
+    hack = millis();
+  }
+  if (newdata){             // if serial1 is available and can read gps.encode
+    gpsdump(gps);
+    Serial.println("LOCKED ON");
+  }else{          // if not locked
+    Serial.println("Not Locked");
+  }
+  start = hack;             // resets timer
 }
 
 // Get and process GPS data
@@ -446,8 +446,17 @@ void gpsdump(TinyGPS &gps) {
 // Feed data as it becomes available 
 bool feedgps() {
 	while (Serial1.available()) {
-		if (gps.encode(Serial1.read()))
-			return true;
+		//char g = Serial1.read();
+    //Serial.print(g);
+		//if (gps.encode(g)){
+    if (gps.encode(Serial1.read())){
+      //Serial.println("encode is true-----------------");
+      return true;
+		}
+    else{
+      //Serial.println("GPS Sig failed");
+    }
+      
 	}
 	return false;
 }
